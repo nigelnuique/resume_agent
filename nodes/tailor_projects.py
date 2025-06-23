@@ -54,6 +54,13 @@ def tailor_projects(state: ResumeState) -> ResumeState:
         - If original project used specific tools/languages, preserve that exact technology stack
         - Do not inflate the technology stack to match job requirements if it's not accurate
         - Example: If original says "using SQL", do NOT change to "using SQL, Python, and pandas"
+        
+        CRITICAL WRITING STYLE GUIDELINES:
+        - Avoid AI-sounding language patterns like "demonstrating...", "showcasing...", "highlighting..."
+        - Let achievements speak for themselves - don't explicitly state what they demonstrate
+        - Use direct, concise language focused on actions and results
+        - Example: Instead of "Built a model, demonstrating ML expertise" → "Achieved 97% accuracy using KNN and Decision Trees"
+        - Example: Instead of "Developed a system, showcasing data processing skills" → "Extracted pathology, radiology, and medication tasks from clinical notes"
 
         CRITICAL: Return ONLY the top 4 most relevant projects, not all projects.
 

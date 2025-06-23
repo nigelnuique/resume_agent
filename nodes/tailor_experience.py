@@ -62,6 +62,13 @@ def tailor_experience(state: ResumeState) -> ResumeState:
         5. Focus on impact and results
         6. Keep all factual information accurate (companies, positions, dates, locations)
         
+        CRITICAL WRITING STYLE GUIDELINES:
+        - Avoid AI-sounding language patterns like "demonstrating...", "showcasing...", "highlighting..."
+        - Let achievements speak for themselves - don't explicitly state what they demonstrate
+        - Use direct, concise language focused on actions and results
+        - Example: Instead of "Led 10 projects, demonstrating leadership skills" → "Led 10 projects, releasing 40 setups"
+        - Example: Instead of "Developed solutions, showcasing technical expertise" → "Developed test solutions for 4 new IC products"
+        
         IMPORTANT CONSTRAINTS:
         - DO NOT ADD data engineering, SQL, Python, or machine learning content to hardware testing roles (Test Development Engineer, Test Systems Development)
         - DO NOT ADD technical data skills to service roles (Personal Shopper, Event Staff, Property Audit)

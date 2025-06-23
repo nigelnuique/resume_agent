@@ -273,6 +273,88 @@ def fix_project_inflated_claims(working_cv: Dict) -> List[str]:
                 updated_highlights.append(updated_highlight)
             
             if any(changes_made):
+                                project['highlights'] = updated_highlights
+    
+    return changes_made
+
+def fix_ai_sounding_language(working_cv: Dict) -> List[str]:
+    """
+    Fix AI-sounding language patterns like 'demonstrating', 'showcasing', 'highlighting'.
+    """
+    changes_made = []
+    
+    # Fix experience section
+    if 'experience' in working_cv:
+        for exp in working_cv['experience']:
+            if 'highlights' in exp:
+                updated_highlights = []
+                
+                for highlight in exp['highlights']:
+                    original_highlight = highlight
+                    updated_highlight = highlight
+                    
+                    # Remove AI-sounding patterns
+                    ai_patterns = [
+                        (r',\s*demonstrating\s+[^,]*skills?[^,]*', ''),
+                        (r',\s*showcasing\s+[^,]*skills?[^,]*', ''),
+                        (r',\s*highlighting\s+[^,]*skills?[^,]*', ''),
+                        (r',\s*demonstrating\s+[^,]*capabilities?[^,]*', ''),
+                        (r',\s*showcasing\s+[^,]*capabilities?[^,]*', ''),
+                        (r',\s*demonstrating\s+[^,]*proficiency[^,]*', ''),
+                        (r',\s*showcasing\s+[^,]*proficiency[^,]*', ''),
+                        (r',\s*demonstrating\s+[^,]*competence[^,]*', ''),
+                        (r',\s*demonstrating\s+[^,]*expertise[^,]*', ''),
+                        (r',\s*contributing\s+to\s+[^,]*efficiency[^,]*', ''),
+                        (r',\s*demonstrating\s+[^,]*collaboration[^,]*', ''),
+                        (r',\s*showcasing\s+[^,]*management[^,]*', ''),
+                    ]
+                    
+                    for pattern, replacement in ai_patterns:
+                        if re.search(pattern, updated_highlight, re.IGNORECASE):
+                            updated_highlight = re.sub(pattern, replacement, updated_highlight, flags=re.IGNORECASE)
+                            # Clean up any trailing commas or spaces
+                            updated_highlight = re.sub(r',\s*$', '', updated_highlight)
+                            updated_highlight = re.sub(r'\s+', ' ', updated_highlight).strip()
+                    
+                    if updated_highlight != original_highlight:
+                        changes_made.append(f"Removed AI-sounding language from experience: {original_highlight[:50]}...")
+                    
+                    updated_highlights.append(updated_highlight)
+                
+                exp['highlights'] = updated_highlights
+    
+    # Fix projects section
+    if 'projects' in working_cv:
+        for project in working_cv['projects']:
+            if 'highlights' in project:
+                updated_highlights = []
+                
+                for highlight in project['highlights']:
+                    original_highlight = highlight
+                    updated_highlight = highlight
+                    
+                    # Remove AI-sounding patterns from projects
+                    ai_patterns = [
+                        (r',\s*demonstrating\s+[^,]*skills?[^,]*\.?', '.'),
+                        (r',\s*showcasing\s+[^,]*skills?[^,]*\.?', '.'),
+                        (r',\s*demonstrating\s+[^,]*proficiency[^,]*\.?', '.'),
+                        (r',\s*showcasing\s+[^,]*proficiency[^,]*\.?', '.'),
+                        (r'[^.]*,\s*demonstrating\s+[^.]*\.', '.'),
+                        (r'[^.]*,\s*showcasing\s+[^.]*\.', '.'),
+                    ]
+                    
+                    for pattern, replacement in ai_patterns:
+                        if re.search(pattern, updated_highlight, re.IGNORECASE):
+                            updated_highlight = re.sub(pattern, replacement, updated_highlight, flags=re.IGNORECASE)
+                            # Clean up multiple periods
+                            updated_highlight = re.sub(r'\.+', '.', updated_highlight)
+                            updated_highlight = re.sub(r'\s+', ' ', updated_highlight).strip()
+                    
+                    if updated_highlight != original_highlight:
+                        changes_made.append(f"Removed AI-sounding language from project: {original_highlight[:50]}...")
+                    
+                    updated_highlights.append(updated_highlight)
+                
                 project['highlights'] = updated_highlights
     
     return changes_made
@@ -320,7 +402,14 @@ def cross_reference_check(state: ResumeState) -> ResumeState:
             all_issues.append("Found inflated collaboration claims in projects section")
             print("   🔧 Fixed project inflated claims")
         
-        # 5. Try LLM-based analysis (optional)
+        # 5. Fix AI-sounding language patterns
+        ai_language_changes = fix_ai_sounding_language(working_cv)
+        all_changes.extend(ai_language_changes)
+        if ai_language_changes:
+            all_issues.append("Found AI-sounding language patterns (demonstrating, showcasing)")
+            print("   🔧 Fixed AI-sounding language patterns")
+        
+        # 6. Try LLM-based analysis (optional)
         try:
             client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
             
