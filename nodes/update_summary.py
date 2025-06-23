@@ -54,12 +54,19 @@ def update_summary(state: ResumeState) -> ResumeState:
         - Essential Requirements: {job_requirements.get('essential_requirements', [])}
         - Experience Level: {job_requirements.get('experience_level', 'Not specified')}
 
-        IMPORTANT TRUTHFULNESS GUIDELINES:
-        - Only claim professional experience that is actually demonstrated in the work history
-        - If the candidate's main professional experience is in a different field (e.g., hardware testing), acknowledge that while highlighting transferable skills
-        - Academic projects and personal projects should be mentioned as "experience with" or "background in" rather than claiming years of professional experience
-        - Do not exaggerate years of experience in specific domains unless clearly supported by professional work history
-        - Focus on potential and transferable skills rather than making false claims about professional experience
+        CRITICAL TRUTHFULNESS GUIDELINES:
+        - ANALYZE the candidate's actual work experience first - what were their actual job titles and responsibilities?
+        - NEVER claim "X years of experience in [domain]" unless the candidate actually worked in that domain professionally
+        - If main professional experience is in different field (e.g., hardware testing, not data engineering), be honest about this
+        - Academic/personal projects = "background in" or "experience with" NOT "professional experience in"
+        - Transferable skills from different domains should be highlighted as transferable, not claimed as direct experience
+        - Example: If someone has 3 years in hardware testing + MS in Data Science, say "Hardware engineer transitioning to data science" NOT "3+ years in data engineering"
+        
+        FORBIDDEN PHRASES (never use these without evidence):
+        - "X years of experience in data engineering" (unless they actually worked as data engineer)
+        - "experienced in developing and deploying...in production environments" (unless they actually did this professionally)
+        - "specializing in ML model development" (unless this was their actual job)
+        - "professional experience in..." (unless it was their actual professional role)
 
         Return ONLY a properly formatted JSON object with:
         - "new_summary": list of strings (each string is a sentence)
@@ -73,6 +80,12 @@ def update_summary(state: ResumeState) -> ResumeState:
         3. Educational background and relevant projects
         4. Potential and enthusiasm for the role rather than inflated experience claims
         
+        GOOD EXAMPLE (honest about transition):
+        "Electronics engineer with 3+ years in hardware testing transitioning to data science through MS degree completion. Strong analytical and problem-solving skills with academic experience in Python, SQL, and machine learning. Eager to apply technical expertise to data engineering challenges."
+        
+        BAD EXAMPLE (inflated claims):
+        "Experienced data engineer with expertise in developing and deploying data pipelines in production environments. 3+ years specializing in data engineering and ML model development."
+        
         Example format:
         {{
             "new_summary": ["Sentence 1.", "Sentence 2.", "Sentence 3."],
@@ -83,9 +96,9 @@ def update_summary(state: ResumeState) -> ResumeState:
         """
         
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are an expert resume writer. Create honest, concise professional summaries that distinguish between professional work experience and academic/project experience. Never exaggerate experience claims."},
+                {"role": "system", "content": "You are an expert resume writer who prioritizes TRUTHFULNESS above all else. You must carefully analyze the candidate's actual work history and never claim professional experience in domains where they only have academic/project experience. Be honest about career transitions and distinguish clearly between professional work experience vs academic background."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3
