@@ -1,12 +1,16 @@
-from typing import Dict, Any, List
+"""
+Professional summary updating with library-based constraint validation.
+"""
+
 import os
+from typing import Dict, Any, List
 from openai import OpenAI
 from state import ResumeState
 from .json_utils import safe_json_parse, create_fallback_response
 
 # Import library-based utilities for validation
 try:
-    from utils.grammar_checker import count_words_sentences, validate_summary_constraints
+    from utils.text_utils import count_words_sentences, validate_summary_constraints
     UTILS_AVAILABLE = True
 except ImportError:
     UTILS_AVAILABLE = False
