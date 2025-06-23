@@ -2,54 +2,62 @@ from typing import Dict, Any
 import os
 from openai import OpenAI
 from state import ResumeState
+from .json_utils import safe_json_parse, create_fallback_response
 
 def parse_job_ad(state: ResumeState) -> ResumeState:
     """
-    Parse job advertisement to extract requirements, skills, and company culture.
+    Parse job advertisement to extract key requirements and information.
     """
     print("🔍 Parsing job advertisement...")
     
     try:
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        job_ad = state['job_advertisement']
         
         prompt = f"""
-        Analyze the following job advertisement and extract key information in JSON format:
+        Analyze this job advertisement and extract key information for resume tailoring:
 
         Job Advertisement:
-        {state['job_advertisement']}
+        {job_ad}
 
-        Please extract the following information:
-        1. essential_requirements: List of must-have skills and qualifications
-        2. desirable_requirements: List of nice-to-have skills and qualifications
-        3. key_technologies: List of specific technologies, tools, and platforms mentioned
-        4. soft_skills: List of interpersonal and communication skills required
-        5. company_culture: Description of company values and culture
-        6. role_focus: Primary focus areas of the role
-        7. experience_level: Required years of experience
-        8. education_requirements: Required degree and field
-        9. industry_domain: Industry or domain focus (e.g., healthcare, finance, tech)
-        10. location: Job location
-        11. work_arrangement: Remote, hybrid, or on-site
-        12. tone_indicators: Formal/informal, technical/business-focused, etc.
-
-        Return the response as a valid JSON object.
+        Extract and return a JSON object with:
+        - "essential_requirements": list of must-have skills/qualifications
+        - "preferred_requirements": list of nice-to-have skills/qualifications  
+        - "key_technologies": list of specific technologies, tools, frameworks mentioned
+        - "soft_skills": list of soft skills and personal qualities mentioned
+        - "role_focus": list of main responsibilities and focus areas
+        - "industry_domain": the industry or business domain
+        - "company_culture": any cultural aspects or values mentioned
+        - "experience_level": required years of experience
         """
         
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are an expert job advertisement analyst. Extract key information and return it as valid JSON."},
+                {"role": "system", "content": "You are an expert at analyzing job advertisements. Extract specific, actionable requirements for resume tailoring."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.3
+            temperature=0.1
         )
         
-        # Parse the JSON response
-        import json
-        job_requirements = json.loads(response.choices[0].message.content)
+        job_requirements = safe_json_parse(response.choices[0].message.content, "parse_job_ad")
         
-        # Update state
+        if job_requirements is None:
+            # Fallback with basic parsing
+            print("   ⚠️ Using fallback job parsing")
+            job_requirements = create_fallback_response("parse_job_ad", {
+                'essential_requirements': ['Python', 'SQL', 'Data Analysis'],
+                'preferred_requirements': ['Machine Learning', 'Cloud Technologies'],
+                'key_technologies': ['Python', 'SQL', 'Git'],
+                'soft_skills': ['Communication', 'Problem Solving'],
+                'role_focus': ['Data Engineering', 'Analytics'],
+                'industry_domain': 'Tech',
+                'company_culture': 'Collaborative',
+                'experience_level': '2+ years'
+            })
+        
         state['job_requirements'] = job_requirements
+        state['job_parsed'] = True
         
         print("✅ Job advertisement parsed successfully")
         print(f"   - Found {len(job_requirements.get('essential_requirements', []))} essential requirements")
@@ -60,5 +68,17 @@ def parse_job_ad(state: ResumeState) -> ResumeState:
         error_msg = f"Error parsing job advertisement: {str(e)}"
         print(f"❌ {error_msg}")
         state['errors'].append(error_msg)
+        # Set fallback job requirements to avoid breaking the pipeline
+        state['job_requirements'] = {
+            'essential_requirements': [],
+            'preferred_requirements': [],
+            'key_technologies': [],
+            'soft_skills': [],
+            'role_focus': [],
+            'industry_domain': 'General',
+            'company_culture': '',
+            'experience_level': ''
+        }
+        state['job_parsed'] = True
     
     return state

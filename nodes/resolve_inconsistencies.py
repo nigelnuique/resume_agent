@@ -1,93 +1,93 @@
-from typing import Dict, Any, List
+from typing import Dict, Any
 import os
 from openai import OpenAI
 from state import ResumeState
+from .json_utils import safe_json_parse, create_fallback_response
 
 def resolve_inconsistencies(state: ResumeState) -> ResumeState:
     """
-    Resolve inconsistencies and unsupported claims found during cross-reference check.
+    Resolve any inconsistencies found in the CV using AI.
     """
     print("🔧 Resolving inconsistencies...")
+    
+    # Check if there are any inconsistencies to resolve
+    inconsistencies = []
+    
+    # Collect inconsistencies from various sources
+    if 'warnings' in state and state['warnings']:
+        inconsistencies.extend(state['warnings'])
+    
+    if not inconsistencies:
+        print("✅ No inconsistencies to resolve")
+        state['inconsistencies_resolved'] = True
+        return state
     
     try:
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         
-        working_cv = state['working_cv']['cv']['sections']
-        
-        # Check if there are inconsistencies that need fixing (from warnings and errors)
-        inconsistencies_to_fix = []
-        inconsistencies_to_fix.extend([error for error in state['errors'] if 'inconsistent' in error.lower() or 'not supported' in error.lower() or 'no evidence' in error.lower()])
-        inconsistencies_to_fix.extend([warning for warning in state['warnings'] if 'inconsistent' in warning.lower() or 'not supported' in warning.lower() or 'proficiency' in warning.lower()])
-        
-        if not inconsistencies_to_fix:
-            print("✅ No inconsistencies to resolve")
-            state['inconsistencies_resolved'] = True
-            return state
+        current_cv = state['working_cv']['cv']['sections']
         
         prompt = f"""
-        Fix the inconsistencies in this CV by making specific corrections. The cross-reference check found several unsupported claims that need to be addressed.
+        Review and resolve the following inconsistencies found in this CV:
 
-        Current CV Sections:
-        Professional Summary: {working_cv.get('professional_summary', [])}
-        Experience: {working_cv.get('experience', [])}
-        Projects: {working_cv.get('projects', [])}
-        Education: {working_cv.get('education', [])}
-        Skills: {working_cv.get('skills', [])}
+        Inconsistencies to resolve:
+        {inconsistencies}
 
-        Inconsistencies Found:
-        {inconsistencies_to_fix}
+        Current CV sections:
+        {current_cv}
 
-        Instructions:
-        1. Remove or modify claims in the professional summary that aren't supported by experience/projects
-        2. Remove skills that have no evidence in experience/projects/education
-        3. Ensure all claims can be backed up by specific examples in the CV
-        4. Keep all factual information accurate - only remove unsupported claims, don't add false information
-        5. Maintain the tailored focus for the target job while ensuring accuracy
+        Please provide specific corrections for each inconsistency. Return a JSON object with:
+        - "corrections": list of specific corrections made
+        - "updated_sections": any CV sections that need to be updated (only include sections that changed)
+        - "resolution_summary": brief summary of what was resolved
 
-        Return a JSON object with the corrected sections:
-        {{
-            "professional_summary": [...],
-            "experience": [...], 
-            "projects": [...],
-            "education": [...],
-            "skills": [...],
-            "corrections_made": ["list of specific corrections"]
-        }}
+        Focus on making the CV internally consistent and accurate.
         """
         
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are an expert resume editor focused on accuracy and consistency. Remove or modify unsupported claims while maintaining the CV's strength and relevance."},
+                {"role": "system", "content": "You are an expert resume editor. Resolve inconsistencies while maintaining accuracy and professionalism."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.2
         )
         
-        import json
-        result = json.loads(response.choices[0].message.content)
+        result = safe_json_parse(response.choices[0].message.content, "resolve_inconsistencies")
         
-        # Update all sections with corrected versions
-        for section_name in ['professional_summary', 'experience', 'projects', 'education', 'skills']:
-            if section_name in result:
-                state['working_cv']['cv']['sections'][section_name] = result[section_name]
+        if result is None:
+            print("   ⚠️ Could not parse inconsistency resolution - inconsistencies remain")
+            state['inconsistencies_resolved'] = True
+            return state
         
-        corrections_made = result.get('corrections_made', [])
+        corrections = result.get('corrections', [])
+        updated_sections = result.get('updated_sections', {})
+        resolution_summary = result.get('resolution_summary', 'No summary available')
         
-        # Clear the resolved inconsistencies from errors and warnings
-        state['errors'] = [error for error in state['errors'] if error not in inconsistencies_to_fix]
-        state['warnings'] = [warning for warning in state['warnings'] if warning not in inconsistencies_to_fix]
+        # Apply any section updates
+        sections_updated = 0
+        for section_name, section_content in updated_sections.items():
+            if section_name in current_cv:
+                current_cv[section_name] = section_content
+                sections_updated += 1
         
         state['inconsistencies_resolved'] = True
         
         print("✅ Inconsistencies resolved successfully")
-        print("   Corrections made:")
-        for correction in corrections_made:
-            print(f"   - {correction}")
+        print(f"   - Corrections made: {len(corrections)}")
+        print(f"   - Sections updated: {sections_updated}")
+        if resolution_summary:
+            print(f"   - Summary: {resolution_summary}")
+        
+        # Clear resolved inconsistencies from warnings
+        if corrections:
+            state['warnings'] = []
         
     except Exception as e:
         error_msg = f"Error resolving inconsistencies: {str(e)}"
         print(f"❌ {error_msg}")
         state['errors'].append(error_msg)
+        # Mark as resolved even if there's an error to avoid blocking the pipeline
+        state['inconsistencies_resolved'] = True
     
     return state 

@@ -2,69 +2,69 @@ import json
 import re
 from typing import Dict, Any, Optional
 
-def safe_json_parse(content: str, node_name: str = "unknown") -> Optional[Dict[Any, Any]]:
+def safe_json_parse(content: str, context: str = "unknown") -> Optional[Dict[str, Any]]:
     """
-    Safely parse JSON content from OpenAI responses.
-    
-    Args:
-        content: The raw content from OpenAI response
-        node_name: Name of the node for error reporting
-        
-    Returns:
-        Parsed JSON dict or None if parsing fails
+    Safely parse JSON content with fallback handling for malformed JSON.
     """
     if not content or not content.strip():
-        print(f"⚠️ Empty response from OpenAI in {node_name}")
+        print(f"   ⚠️ Empty content in {context}")
         return None
     
-    # Clean up the content - sometimes OpenAI adds extra text before/after JSON
+    # Remove common markdown formatting that might interfere
+    content = content.strip()
+    if content.startswith('```json'):
+        content = content[7:]
+    if content.startswith('```'):
+        content = content[3:]
+    if content.endswith('```'):
+        content = content[:-3]
+    
     content = content.strip()
     
-    # Try to find JSON within the response
-    json_match = re.search(r'\{.*\}', content, re.DOTALL)
-    if json_match:
-        json_content = json_match.group()
-    else:
-        json_content = content
-    
+    # First attempt: direct parsing
     try:
-        return json.loads(json_content)
+        return json.loads(content)
     except json.JSONDecodeError as e:
-        print(f"⚠️ JSON parsing error in {node_name}: {str(e)}")
+        print(f"   ⚠️ JSON parsing error in {context}: {str(e)}")
         print(f"   Raw content (first 200 chars): {content[:200]}...")
+    
+    # Second attempt: try to fix common JSON issues
+    try:
+        # Fix common issues like unescaped quotes, trailing commas
+        fixed_content = content
         
-        # Try to fix common JSON issues
-        try:
-            # Fix common issues like trailing commas, unescaped quotes, etc.
-            fixed_content = fix_common_json_issues(json_content)
-            return json.loads(fixed_content)
-        except json.JSONDecodeError:
-            print(f"⚠️ Could not fix JSON in {node_name}")
-            return None
-
-def fix_common_json_issues(content: str) -> str:
-    """
-    Fix common JSON formatting issues that OpenAI sometimes produces.
-    """
-    # Remove trailing commas before closing brackets/braces
-    content = re.sub(r',\s*}', '}', content)
-    content = re.sub(r',\s*]', ']', content)
+        # Replace single quotes with double quotes (but be careful not to break contractions)
+        fixed_content = re.sub(r"(?<![a-zA-Z])'([^']*)'(?![a-zA-Z])", r'"\1"', fixed_content)
+        
+        # Remove trailing commas before closing brackets/braces
+        fixed_content = re.sub(r',(\s*[}\]])', r'\1', fixed_content)
+        
+        # Try to find and extract just the JSON object
+        json_match = re.search(r'(\{.*\})', fixed_content, re.DOTALL)
+        if json_match:
+            fixed_content = json_match.group(1)
+        
+        return json.loads(fixed_content)
+    except json.JSONDecodeError:
+        print(f"   ⚠️ Could not fix JSON in {context}")
     
-    # Fix unescaped quotes in strings (basic fix)
-    # This is a simple approach - more complex cases might need better handling
+    # Third attempt: try to extract key-value pairs manually for simple cases
+    try:
+        if context == "cross_reference_check":
+            # Create a minimal valid response for cross-reference check
+            return {
+                "corrected_sections": {},
+                "changes_made": ["JSON parsing failed - no corrections applied"],
+                "issues_found": ["JSON parsing error prevented analysis"]
+            }
+    except Exception:
+        pass
     
-    return content
+    return None
 
-def create_fallback_response(node_name: str, fallback_data: Dict[Any, Any]) -> Dict[Any, Any]:
+def create_fallback_response(context: str, default_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Create a fallback response when JSON parsing fails.
-    
-    Args:
-        node_name: Name of the node
-        fallback_data: Default data structure to return
-        
-    Returns:
-        Fallback response dictionary
     """
-    print(f"📋 Using fallback response for {node_name}")
-    return fallback_data 
+    print(f"   🔄 Using fallback response for {context}")
+    return default_data 

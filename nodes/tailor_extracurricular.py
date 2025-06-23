@@ -2,6 +2,7 @@ from typing import Dict, Any, List
 import os
 from openai import OpenAI
 from state import ResumeState
+from .json_utils import safe_json_parse, create_fallback_response
 
 def tailor_extracurricular(state: ResumeState) -> ResumeState:
     """
@@ -65,8 +66,16 @@ def tailor_extracurricular(state: ResumeState) -> ResumeState:
             temperature=0.3
         )
         
-        import json
-        result = json.loads(response.choices[0].message.content)
+        result = safe_json_parse(response.choices[0].message.content, "tailor_extracurricular")
+        
+        if result is None:
+            # Fallback: remove all extracurricular activities if parsing fails
+            print("   ⚠️ JSON parsing failed, removing extracurricular section as fallback")
+            if 'extracurricular' in state['working_cv']['cv']['sections']:
+                del state['working_cv']['cv']['sections']['extracurricular']
+            state['extracurricular_tailored'] = True
+            return state
+        
         relevant_activities = result.get('relevant_activities', [])
         removed_activities = result.get('removed_activities', [])
         changes_summary = result.get('changes_summary', 'No changes summary available')
