@@ -43,7 +43,11 @@ def tailor_education(state: ResumeState) -> ResumeState:
         3. Format coursework as: "Relevant coursework: Course 1, Course 2, Course 3, Course 4"
         4. If no courses are relevant to the target role, omit the coursework highlight entirely
 
-        CRITICAL: Keep coursework as a highlight bullet point, NOT as a separate field.
+        CRITICAL PRESERVATION RULES:
+        - Keep coursework as a highlight bullet point, NOT as a separate field
+        - NEVER truncate existing descriptions with "..." - preserve full text of capstone projects, thesis descriptions, etc.
+        - If a capstone or thesis description exists, keep the COMPLETE original text
+        - Only modify coursework lists, not project/thesis descriptions
 
         Return a JSON object with:
         - "education_entries": list of optimized education entries with updated highlights
@@ -62,7 +66,7 @@ def tailor_education(state: ResumeState) -> ResumeState:
                     "highlights": [
                         "Academic merit scholarship",
                         "GPA: 3.5/4.0 (Distinction)",
-                        "Capstone Project: Developed an NLP pipeline...",
+                        "Capstone Project: [PRESERVE FULL ORIGINAL TEXT]",
                         "Relevant coursework: Machine Learning, Data Science with Python, Big Data Processing, Cloud Computing"
                     ]
                 }}
@@ -71,9 +75,9 @@ def tailor_education(state: ResumeState) -> ResumeState:
         """
         
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are an expert resume writer. Keep coursework as highlight bullet points, NOT separate fields. Only include relevant courses for the target role."},
+                {"role": "system", "content": "You are an expert resume writer. Keep coursework as highlight bullet points, NOT separate fields. NEVER truncate existing descriptions - preserve full text of capstone projects and thesis descriptions exactly as they are."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.2
