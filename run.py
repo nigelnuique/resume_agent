@@ -109,19 +109,34 @@ def render_cv(filename: str = "working_CV.yaml", output_dir: str = "rendercv_out
         # Ensure output directory exists
         os.makedirs(output_dir, exist_ok=True)
         
-        # Run RenderCV command
-        cmd = ["rendercv", "render", filename, "--output-folder", output_dir]
+        # Run RenderCV command (without --output-folder parameter which doesn't exist)
+        cmd = ["rendercv", "render", filename]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
         
         if result.returncode == 0:
+            # Move generated files to output directory
+            import shutil
+            import glob
+            
+            # Get base name from filename (without .yaml extension)
+            base_name = os.path.splitext(filename)[0]
+            cv_name = os.path.basename(base_name)
+            
+            # Look for generated files and move them to output directory
+            generated_files = []
+            for pattern in [f"{cv_name}*.pdf", f"{cv_name}*.html", f"{cv_name}*.png", f"{cv_name}*.md", f"{cv_name}*.typ"]:
+                files = glob.glob(pattern)
+                for file in files:
+                    dest_path = os.path.join(output_dir, os.path.basename(file))
+                    shutil.move(file, dest_path)
+                    generated_files.append(os.path.basename(file))
+            
             print("✅ CV rendered successfully!")
             print(f"   📄 Output files saved to {output_dir}/")
             
-            # List generated files
-            if os.path.exists(output_dir):
-                files = os.listdir(output_dir)
-                for file in files:
-                    print(f"   - {file}")
+            # List moved files
+            for file in generated_files:
+                print(f"   - {file}")
             
             return True
         else:
