@@ -1,0 +1,252 @@
+cv:
+  name: Your Full Name
+  location: Your City, Your State/Country
+  email: your.email@example.com
+  phone: +1-XXX-XXX-XXXX
+  website: https://yourwebsite.com
+  social_networks:
+    - network: LinkedIn
+      username: your-linkedin-username
+    - network: GitHub
+      username: your-github-username
+  sections:
+    professional_summary:
+      - Your professional summary goes here - highlight your key skills and experience
+      - Second bullet point about your expertise and achievements
+      - Third bullet point about your career goals or specializations
+    education:
+      - institution: Your University
+        area: Your Field of Study
+        degree: Your Degree Type
+        start_date: 2020-01
+        end_date: 2024-05
+        location: University City, Country
+        highlights:
+          - "GPA: X.X/4.0 (if strong)"
+          - Relevant coursework or thesis project description
+          - Academic achievements or honors
+      - institution: Previous Institution (if applicable)
+        area: Previous Field
+        degree: Previous Degree
+        start_date: 2016-09
+        end_date: 2020-05
+        location: City, Country
+        highlights:
+          - Relevant coursework or achievements
+          - Skills developed during this education
+    experience:
+      - company: Current/Most Recent Company
+        position: Your Job Title
+        start_date: 2023-01
+        end_date: present
+        location: City, Country
+        highlights:
+          - Achievement or responsibility with quantified impact
+          - Technical skills used or projects completed
+          - Collaboration or leadership examples
+      - company: Previous Company
+        position: Previous Job Title
+        start_date: 2021-06
+        end_date: 2022-12
+        location: City, Country
+        highlights:
+          - Key achievements in this role
+          - Technologies or methodologies used
+          - Results or improvements delivered
+      - company: Earlier Company
+        position: Earlier Job Title
+        start_date: 2020-01
+        end_date: 2021-05
+        location: City, Country
+        highlights:
+          - Relevant experience and skills gained
+          - Projects or initiatives you led
+          - Professional growth or recognition
+    projects:
+      - name: '[Project Name](https://project-link.com)'
+        start_date: 2024-03
+        end_date: present
+        summary: Brief description of what the project does and its purpose
+        highlights:
+          - Technical implementation details and technologies used
+          - Results, metrics, or impact achieved
+          - Skills or methodologies demonstrated
+      - name: '[Another Project](https://github.com/username/project)'
+        start_date: 2023-09
+        end_date: 2023-12
+        summary: Description of this project's goals and outcomes
+        highlights:
+          - Key technical challenges solved
+          - Tools and frameworks utilized
+          - Quantified results or user impact
+      - name: '[Third Project](https://project-demo.com)'
+        start_date: 2023-06
+        end_date: 2023-08
+        summary: What this project accomplished or demonstrated
+        highlights:
+          - Specific technologies or algorithms used
+          - Learning outcomes or skill development
+          - Recognition or feedback received
+    skills:
+      - label: Programming
+        details: "Python, JavaScript, Java, SQL, R, etc."
+      - label: Web Development
+        details: "React, Node.js, HTML/CSS, Django, Flask, etc."
+      - label: Data Science & ML
+        details: "pandas, NumPy, scikit-learn, TensorFlow, PyTorch, etc."
+      - label: Cloud & DevOps
+        details: "AWS, Google Cloud, Docker, Kubernetes, Git, etc."
+      - label: Databases
+        details: "PostgreSQL, MongoDB, Redis, MySQL, etc."
+      - label: Tools & Software
+        details: "VS Code, Jupyter, Tableau, Excel, etc."
+      - label: Certifications
+        details: "AWS Certified, Google Analytics, etc."
+      - label: Currently Learning
+        details: "Technologies or skills you're actively developing"
+  design:
+    theme: classic
+    page:
+      size: us-letter
+      top_margin: 2cm
+      bottom_margin: 2cm
+      left_margin: 2cm
+      right_margin: 2cm
+      show_page_numbering: true
+      show_last_updated_date: true
+    colors:
+      text: rgb(0, 0, 0)
+      name: rgb(0, 79, 144)
+      connections: rgb(0, 79, 144)
+      section_titles: rgb(0, 79, 144)
+      links: rgb(0, 79, 144)
+      last_updated_date_and_page_numbering: rgb(128, 128, 128)
+    text:
+      font_family: Source Sans 3
+      font_size: 10pt
+      leading: 0.6em
+      alignment: justified
+      date_and_location_column_alignment: right
+    links:
+      underline: false
+      use_external_link_icon: true
+    header:
+      name_font_family: Source Sans 3
+      name_font_size: 30pt
+      name_bold: true
+      photo_width: 3.5cm
+      vertical_space_between_name_and_connections: 0.7cm
+      vertical_space_between_connections_and_first_section: 0.7cm
+      horizontal_space_between_connections: 0.5cm
+      connections_font_family: Source Sans 3
+      separator_between_connections: ''
+      use_icons_for_connections: true
+      alignment: center
+    section_titles:
+      type: with-parial-line
+      font_family: Source Sans 3
+      font_size: 1.4em
+      bold: true
+      small_caps: false
+      line_thickness: 0.5pt
+      vertical_space_above: 0.5cm
+      vertical_space_below: 0.3cm
+    entries:
+      date_and_location_width: 4.15cm
+      left_and_right_margin: 0.2cm
+      horizontal_space_between_columns: 0.1cm
+      vertical_space_between_entries: 1.2em
+      allow_page_break_in_sections: true
+      allow_page_break_in_entries: true
+      short_second_row: false
+      show_time_spans_in: []
+    highlights:
+      bullet: •
+      top_margin: 0.25cm
+      left_margin: 0.4cm
+      vertical_space_between_highlights: 0.25cm
+      horizontal_space_between_bullet_and_highlight: 0.5em
+      summary_left_margin: 0cm
+    entry_types:
+      one_line_entry:
+        template: '**LABEL:** DETAILS'
+      education_entry:
+        main_column_first_row_template: '**INSTITUTION**, AREA'
+        degree_column_template: '**DEGREE**'
+        degree_column_width: 1cm
+        main_column_second_row_template: |-
+          SUMMARY
+          HIGHLIGHTS
+        date_and_location_column_template: |-
+          LOCATION
+          DATE
+      normal_entry:
+        main_column_first_row_template: '**NAME**'
+        main_column_second_row_template: |-
+          SUMMARY
+          HIGHLIGHTS
+        date_and_location_column_template: |-
+          LOCATION
+          DATE
+      experience_entry:
+        main_column_first_row_template: '**COMPANY**, POSITION'
+        main_column_second_row_template: |-
+          SUMMARY
+          HIGHLIGHTS
+        date_and_location_column_template: |-
+          LOCATION
+          DATE
+      publication_entry:
+        main_column_first_row_template: '**TITLE**'
+        main_column_second_row_template: |-
+          AUTHORS
+          URL (JOURNAL)
+        main_column_second_row_without_journal_template: |-
+          AUTHORS
+          URL
+        main_column_second_row_without_url_template: |-
+          AUTHORS
+          JOURNAL
+        date_and_location_column_template: DATE
+  locale:
+    language: en
+    phone_number_format: national
+    page_numbering_template: NAME - Page PAGE_NUMBER of TOTAL_PAGES
+    last_updated_date_template: Last updated in TODAY
+    date_template: MONTH_ABBREVIATION YEAR
+    month: month
+    months: months
+    year: year
+    years: years
+    present: present
+    to: –
+    abbreviations_for_months:
+      - Jan
+      - Feb
+      - Mar
+      - Apr
+      - May
+      - June
+      - July
+      - Aug
+      - Sept
+      - Oct
+      - Nov
+      - Dec
+    full_names_of_months:
+      - January
+      - February
+      - March
+      - April
+      - May
+      - June
+      - July
+      - August
+      - September
+      - October
+      - November
+      - December
+rendercv_settings:
+  date: '2025-01-06'
+  render_command:
+  bold_keywords: [] 

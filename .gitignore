@@ -1,0 +1,158 @@
+# ==========================================
+# Resume Agent 3 - GitHub .gitignore
+# ==========================================
+
+# SENSITIVE FILES - Never commit these!
+# Environment variables with API keys
+.env
+.env.local
+.env.production
+
+# Personal resume files - replace with your own
+master_CV.yaml
+my_resume.yaml
+personal_resume.yaml
+
+# Generated/working files
+working_CV.yaml
+tailored_*.yaml
+
+# Job advertisement files (may contain sensitive info)
+job_advertisement.txt
+job_posting.txt
+target_job.txt
+
+# ==========================================
+# OUTPUT FILES
+# ==========================================
+
+# RenderCV output directory
+rendercv_output/
+output/
+generated/
+
+# Generated resume files
+*.pdf
+*.html
+*.png
+*.jpg
+*.jpeg
+*.typ
+
+# Logs and temporary files
+*.log
+tailoring.log
+debug.log
+
+# ==========================================
+# PYTHON STANDARD EXCLUDES
+# ==========================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Virtual environments
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# ==========================================
+# IDE AND OS FILES
+# ==========================================
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# ==========================================
+# TEMPORARY AND BACKUP FILES
+# ==========================================
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+
+# Backup files created by editors
+*~
+.#*
+\#*# 

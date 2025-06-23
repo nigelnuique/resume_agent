@@ -1,0 +1,15 @@
+# Resume Agent 3 Environment Variables
+# Copy this content to a file named .env and add your actual API key
+
+# OpenAI API Key - Required for AI-powered resume tailoring
+# Get your API key from: https://platform.openai.com/api-keys
+OPENAI_API_KEY=your-openai-api-key-here
+
+# Optional: Customize OpenAI model (default: gpt-4)
+# OPENAI_MODEL=gpt-4
+
+# Optional: Set temperature for AI responses (0.0-1.0, default varies by node)
+# OPENAI_TEMPERATURE=0.3
+
+# Optional: Enable debug mode (true/false)
+# DEBUG=false 

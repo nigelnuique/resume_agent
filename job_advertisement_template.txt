@@ -1,0 +1,51 @@
+# Job Advertisement Template
+# Replace this content with the actual job posting you're targeting
+
+Senior Software Engineer - Full Stack Development
+San Francisco, CA | Full-time | Remote Friendly
+
+About the Role:
+We are seeking a Senior Software Engineer to join our growing team. You will be responsible for developing and maintaining our web applications, working with modern technologies, and collaborating with cross-functional teams.
+
+Key Responsibilities:
+• Design and develop scalable web applications
+• Collaborate with product managers and designers
+• Write clean, maintainable, and well-tested code
+• Participate in code reviews and technical discussions
+• Mentor junior developers
+
+Essential Requirements:
+• Bachelor's degree in Computer Science or related field
+• 5+ years of experience in software development
+• Strong proficiency in JavaScript, Python, or similar languages
+• Experience with React, Node.js, or equivalent frameworks
+• Knowledge of databases (SQL and NoSQL)
+• Experience with cloud platforms (AWS, GCP, or Azure)
+• Strong problem-solving and communication skills
+
+Desirable Requirements:
+• Experience with microservices architecture
+• Knowledge of DevOps practices and tools
+• Previous experience in a fast-paced startup environment
+• Contributions to open source projects
+
+What We Offer:
+• Competitive salary and equity package
+• Comprehensive health benefits
+• Flexible work arrangements
+• Professional development budget
+• Collaborative and inclusive team culture
+
+Company Culture:
+We value innovation, collaboration, and continuous learning. Our team is passionate about building products that make a real impact on our users' lives.
+
+Application Process:
+Please submit your resume along with a cover letter explaining your interest in the role and relevant experience.
+
+---
+
+INSTRUCTIONS FOR USE:
+1. Replace this entire content with the actual job posting you're applying for
+2. Include all sections: responsibilities, requirements, company culture, etc.
+3. The more detailed the job posting, the better the AI can tailor your resume
+4. Save this file as job_advertisement.txt before running the Resume Agent 
