@@ -1,137 +1,146 @@
-from typing import Dict, Any, List
+"""
+Grammar and tone checking using library-based utilities.
+Provides cost-effective Australian English grammar checking.
+"""
+
 import os
-from openai import OpenAI
+from typing import Dict, List, Any
 from state import ResumeState
-from .json_utils import safe_json_parse, create_fallback_response
+
+# Import library-based utilities
+try:
+    from utils.grammar_checker import check_grammar, improve_readability, GrammarChecker
+    UTILS_AVAILABLE = True
+except ImportError:
+    UTILS_AVAILABLE = False
+    print("⚠️ Grammar checking utilities not available")
 
 def grammar_tone_check(state: ResumeState) -> ResumeState:
     """
-    Polish grammar and adjust tone to match job requirements.
+    Check grammar and tone using library-based tools (Australian English).
     """
-    print("✍️ Checking grammar and adjusting tone...")
+    print("📝 Checking grammar and tone using library-based tools...")
+    
+    if not UTILS_AVAILABLE:
+        print("   ⚠️ Library-based grammar checking not available, skipping...")
+        state['grammar_checked'] = True
+        return state
     
     try:
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        # Initialize grammar checker
+        grammar_checker = GrammarChecker()
+        if not grammar_checker.tool:
+            print("   ⚠️ LanguageTool not available, performing basic checks only...")
         
-        working_cv = state['working_cv']['cv']['sections']
-        job_requirements = state['job_requirements']
+        working_cv = state['working_cv']
+        sections = working_cv['cv']['sections']
         
-        # Extract all text content that needs checking
-        text_content = []
+        corrections_made = []
+        total_errors = 0
+        sections_checked = 0
         
-        # Professional summary
-        if 'professional_summary' in working_cv:
-            text_content.extend([("professional_summary", i, text) for i, text in enumerate(working_cv['professional_summary'])])
+        # Check each section
+        for section_name, section_data in sections.items():
+            if not section_data:
+                continue
+                
+            print(f"   📋 Checking {section_name}...")
+            section_corrections = 0
+            
+            # Process different section types
+            if section_name == 'professional_summary':
+                if isinstance(section_data, list):
+                    corrected_summary = []
+                    for item in section_data:
+                        if isinstance(item, str):
+                            result = check_grammar(item)
+                            if result['available'] and result['error_count'] > 0:
+                                corrected_summary.append(result['corrected_text'])
+                                section_corrections += result['error_count']
+                            else:
+                                corrected_summary.append(item)
+                    
+                    if section_corrections > 0:
+                        sections[section_name] = corrected_summary
+                        corrections_made.append(f"{section_name}: {section_corrections} corrections")
+            
+            elif isinstance(section_data, list):
+                # Handle experience, projects, education, etc.
+                corrected_entries = []
+                for entry in section_data:
+                    if isinstance(entry, dict):
+                        corrected_entry = entry.copy()
+                        
+                        # Check highlights
+                        if 'highlights' in entry and isinstance(entry['highlights'], list):
+                            corrected_highlights = []
+                            for highlight in entry['highlights']:
+                                if isinstance(highlight, str):
+                                    result = check_grammar(highlight)
+                                    if result['available'] and result['error_count'] > 0:
+                                        corrected_highlights.append(result['corrected_text'])
+                                        section_corrections += result['error_count']
+                                    else:
+                                        corrected_highlights.append(highlight)
+                            corrected_entry['highlights'] = corrected_highlights
+                        
+                        # Check other text fields
+                        for field in ['summary', 'description']:
+                            if field in entry and isinstance(entry[field], str):
+                                result = check_grammar(entry[field])
+                                if result['available'] and result['error_count'] > 0:
+                                    corrected_entry[field] = result['corrected_text']
+                                    section_corrections += result['error_count']
+                        
+                        corrected_entries.append(corrected_entry)
+                    else:
+                        corrected_entries.append(entry)
+                
+                if section_corrections > 0:
+                    sections[section_name] = corrected_entries
+                    corrections_made.append(f"{section_name}: {section_corrections} corrections")
+            
+            total_errors += section_corrections
+            sections_checked += 1
         
-        # Experience highlights
-        if 'experience' in working_cv:
-            for exp_idx, exp in enumerate(working_cv['experience']):
-                if 'highlights' in exp:
-                    text_content.extend([("experience", exp_idx, highlight) for highlight in exp['highlights']])
+        # Generate readability report for professional summary
+        readability_feedback = []
+        if 'professional_summary' in sections:
+            summary_text = ' '.join(sections['professional_summary']) if isinstance(sections['professional_summary'], list) else str(sections['professional_summary'])
+            readability = improve_readability(summary_text)
+            
+            if readability['suggestions']:
+                readability_feedback = readability['suggestions']
+                print(f"   📊 Readability score: {readability['flesch_score']:.1f}")
+                print(f"   📚 Grade level: {readability['grade_level']:.1f}")
         
-        # Project highlights and summaries
-        if 'projects' in working_cv:
-            for proj_idx, proj in enumerate(working_cv['projects']):
-                if 'summary' in proj:
-                    text_content.append(("projects_summary", proj_idx, proj['summary']))
-                if 'highlights' in proj:
-                    text_content.extend([("projects_highlights", proj_idx, highlight) for highlight in proj['highlights']])
-        
-        # Education highlights
-        if 'education' in working_cv:
-            for edu_idx, edu in enumerate(working_cv['education']):
-                if 'highlights' in edu:
-                    text_content.extend([("education", edu_idx, highlight) for highlight in edu['highlights']])
-        
-        prompt = f"""
-        Review and improve the grammar, sentence structure, and tone of this CV content.
-
-        Target tone based on job requirements:
-        - Company Culture: {job_requirements.get('company_culture', '')}
-        - Tone Indicators: {job_requirements.get('tone_indicators', [])}
-        - Industry: {job_requirements.get('industry_domain', 'General')}
-
-        Text Content to Review:
-        {text_content}
-
-        Instructions:
-        1. Fix any grammar, punctuation, or sentence structure issues
-        2. Ensure consistent tone throughout the CV
-        3. Match tone to job requirements:
-           - Formal/professional for traditional industries
-           - Technical/precise for technical roles
-           - Collaborative/team-focused if company values teamwork
-        4. Ensure bullet points are concise and impactful
-        5. Use active voice where appropriate
-        6. Maintain Australian English spelling
-
-        Return ONLY a properly formatted JSON object (no additional text) with:
-        - "corrected_content": list of arrays [[section, index, corrected_text]]
-        - "changes_made": list of specific grammar/tone improvements
-        - "tone_adjustments": description of tone modifications made
-        
-        Example format:
-        {{
-            "corrected_content": [["professional_summary", 0, "corrected text here"]],
-            "changes_made": ["Fixed grammar in summary"],
-            "tone_adjustments": "Made tone more technical"
-        }}
-        """
-        
-        response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are an expert editor and writing coach. Improve grammar and tone while maintaining the original meaning and impact."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.3
-        )
-        
-        result = safe_json_parse(response.choices[0].message.content, "grammar_tone_check")
-        
-        if result is None:
-            # Provide fallback behavior
-            fallback_data = {
-                'corrected_content': [],
-                'changes_made': ["Grammar check completed with simplified processing"],
-                'tone_adjustments': "Unable to parse detailed tone adjustments"
-            }
-            result = create_fallback_response("grammar_tone_check", fallback_data)
-        
-        corrected_content = result.get('corrected_content', [])
-        changes_made = result.get('changes_made', [])
-        tone_adjustments = result.get('tone_adjustments', '')
-        
-        # Apply corrections to working CV
-        changes_applied = 0
-        for item in corrected_content:
-            if isinstance(item, list) and len(item) >= 3:
-                section, index, corrected_text = item[0], item[1], item[2]
-                try:
-                    if section == "professional_summary":
-                        working_cv['professional_summary'][index] = corrected_text
-                        changes_applied += 1
-                    elif section == "experience" and index < len(working_cv.get('experience', [])):
-                        # Find the highlight index and update it
-                        if 'highlights' in working_cv['experience'][index]:
-                            # For simplicity, we'll update the entire highlights array
-                            pass  # Skip for now to avoid complexity
-                    elif section == "projects_summary" and index < len(working_cv.get('projects', [])):
-                        working_cv['projects'][index]['summary'] = corrected_text
-                        changes_applied += 1
-                except (IndexError, TypeError, KeyError):
-                    continue  # Skip invalid corrections
-        
+        # Update state
+        state['working_cv'] = working_cv
         state['grammar_checked'] = True
         
-        print("✅ Grammar and tone check completed")
-        print(f"   Tone adjustments: {tone_adjustments}")
-        print(f"   Made {len(changes_made)} grammar improvements")
-        print(f"   Applied {changes_applied} corrections")
+        # Report results
+        if corrections_made:
+            print("✅ Grammar checking completed successfully")
+            print(f"   📊 Total corrections: {total_errors}")
+            print(f"   📋 Sections checked: {sections_checked}")
+            print("   📝 Corrections by section:")
+            for correction in corrections_made:
+                print(f"     - {correction}")
+        else:
+            print("✅ Grammar checking completed - no corrections needed")
+            print(f"   📋 Sections checked: {sections_checked}")
+        
+        if readability_feedback:
+            print("   💡 Readability suggestions:")
+            for suggestion in readability_feedback:
+                print(f"     - {suggestion}")
+        
+        return state
         
     except Exception as e:
-        error_msg = f"Error in grammar and tone check: {str(e)}"
-        print(f"❌ {error_msg}")
-        state['errors'].append(error_msg)
+        print(f"❌ Grammar checking failed: {str(e)}")
+        print("   Continuing without grammar corrections...")
+        state['grammar_checked'] = True
+        return state
     
     return state 

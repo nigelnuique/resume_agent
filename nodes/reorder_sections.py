@@ -1,114 +1,83 @@
-from typing import Dict, Any, List
+"""
+Rule-based section ordering and optimization.
+Provides cost-effective alternative to LLM-based section reordering.
+"""
+
 import os
-from openai import OpenAI
+from typing import Dict, Any, List
 from state import ResumeState
-from .json_utils import safe_json_parse, create_fallback_response
+
+# Import library-based utilities
+try:
+    from utils.section_optimizer import optimize_section_structure, validate_section_optimization
+    UTILS_AVAILABLE = True
+except ImportError:
+    UTILS_AVAILABLE = False
+    print("⚠️ Section optimization utilities not available")
 
 def reorder_sections(state: ResumeState) -> ResumeState:
     """
-    Reorder CV sections based on job requirements. Only remove sections that are empty or explicitly irrelevant.
-    Individual tailoring functions handle content-specific removal decisions.
+    Reorder and optimize CV sections using rule-based logic.
     """
-    print("📋 Reordering CV sections for optimal presentation...")
+    print("📋 Optimizing CV section structure using rule-based logic...")
+    
+    if not UTILS_AVAILABLE:
+        print("   ⚠️ Rule-based optimization not available, skipping...")
+        state['sections_reordered'] = True
+        return state
     
     try:
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        working_cv = state['working_cv']['cv']
+        current_sections = working_cv.get('sections', {})
+        job_requirements = state.get('job_requirements', {})
         
-        # Get current sections and check which ones have content
-        current_sections = state['working_cv']['cv']['sections']
-        sections_with_content = {}
-        empty_sections = []
+        # Optimize section structure
+        optimization_result = optimize_section_structure(current_sections, job_requirements)
         
-        for section_name, content in current_sections.items():
-            if content and (not isinstance(content, list) or len(content) > 0):
-                sections_with_content[section_name] = content
-            else:
-                empty_sections.append(section_name)
+        # Validate optimization
+        warnings = validate_section_optimization(current_sections, optimization_result['optimized_sections'])
         
-        job_requirements = state['job_requirements']
+        # Apply optimization
+        working_cv['sections'] = optimization_result['optimized_sections']
         
-        prompt = f"""
-        Based on this job advertisement analysis, determine the optimal order for existing CV sections.
-        IMPORTANT: Only suggest removing sections that are truly irrelevant - most sections have already been processed by specialized functions.
-
-        Job Requirements:
-        - Role Focus: {job_requirements.get('role_focus', [])}
-        - Industry: {job_requirements.get('industry_domain', 'General')}
-        - Experience Level: {job_requirements.get('experience_level', 'Not specified')}
-        - Key Technologies: {job_requirements.get('key_technologies', [])}
-        - Essential Requirements: {job_requirements.get('essential_requirements', [])}
-
-        Available CV Sections (with content):
-        {list(sections_with_content.keys())}
-
-        Empty sections (will be removed): {empty_sections}
-
-        Guidelines for section ordering:
-        1. professional_summary - Always first
-        2. skills/experience - Order based on role emphasis (technical vs managerial)
-        3. projects - High priority for technical roles
-        4. education/certifications - Lower priority for experienced roles
-        5. extracurricular - Lowest priority, remove only if truly irrelevant
-
-        Return a JSON object with:
-        - "optimal_order": ordered list of section names for final CV
-        - "sections_to_remove": list of section names to remove (be conservative - only truly irrelevant ones)
-        - "reasoning": brief explanation for the ordering and any removals
-
-        Be conservative with removals - sections have already been tailored by specialized functions.
-        """
-        
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are an expert resume writer. Focus on optimal section ordering rather than aggressive removal."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.3
-        )
-        
-        result = safe_json_parse(response.choices[0].message.content, "reorder_sections")
-        
-        if result is None:
-            # Provide fallback behavior - keep all sections with content in a reasonable order
-            default_order = ['professional_summary', 'skills', 'experience', 'projects', 'education', 'certifications', 'extracurricular']
-            sections_to_keep = [s for s in default_order if s in sections_with_content]
-            # Add any remaining sections not in default order
-            sections_to_keep.extend([s for s in sections_with_content.keys() if s not in sections_to_keep])
-            
-            fallback_data = {
-                'optimal_order': sections_to_keep,
-                'sections_to_remove': empty_sections,
-                'reasoning': 'Used default ordering due to parsing error, removed only empty sections'
-            }
-            result = create_fallback_response("reorder_sections", fallback_data)
-        
-        optimal_order = result.get('optimal_order', list(sections_with_content.keys()))
-        sections_to_remove = result.get('sections_to_remove', []) + empty_sections  # Always remove empty sections
-        reasoning = result.get('reasoning', 'No reasoning available')
-        
-        # Create new sections dict with optimal order, excluding removed sections
-        filtered_sections = {}
-        
-        for section_name in optimal_order:
-            if section_name in sections_with_content and section_name not in sections_to_remove:
-                filtered_sections[section_name] = sections_with_content[section_name]
-        
-        state['working_cv']['cv']['sections'] = filtered_sections
+        # Update state
+        state['working_cv']['cv'] = working_cv
         state['sections_reordered'] = True
         
-        kept_sections = list(filtered_sections.keys())
-        removed_sections = list(set(current_sections.keys()) - set(kept_sections))
+        # Report results
+        kept_sections = optimization_result['kept_sections']
+        removed_sections = optimization_result['removed_sections']
+        reasoning = optimization_result['reasoning']
         
-        print("✅ Sections optimized successfully")
-        print(f"   - Final section order: {' → '.join(kept_sections)}")
+        print("✅ Section optimization completed")
+        print(f"   📊 Sections kept: {' → '.join(kept_sections)}")
+        
         if removed_sections:
-            print(f"   - Sections removed: {', '.join(removed_sections)}")
-        print(f"   - Reasoning: {reasoning}")
+            print(f"   🗑️ Sections removed: {', '.join(removed_sections)}")
+        
+        # Show reasoning for key decisions
+        print("   📝 Reasoning:")
+        for section, reason in reasoning.items():
+            if section in kept_sections:
+                print(f"     ✅ {section}: {reason}")
+            elif section in removed_sections:
+                print(f"     ❌ {section}: {reason}")
+        
+        # Show any warnings
+        if warnings:
+            print("   ⚠️ Optimization warnings:")
+            for warning in warnings:
+                print(f"     - {warning}")
+        
+        # Summary statistics
+        original_count = len([s for s in current_sections.values() if s])
+        optimized_count = len([s for s in optimization_result['optimized_sections'].values() if s])
+        print(f"   📈 Section count: {original_count} → {optimized_count}")
+        
+        return state
         
     except Exception as e:
-        error_msg = f"Error optimizing sections: {str(e)}"
-        print(f"❌ {error_msg}")
-        state['errors'].append(error_msg)
-    
-    return state
+        print(f"❌ Section optimization failed: {str(e)}")
+        print("   Continuing with original section order...")
+        state['sections_reordered'] = True
+        return state

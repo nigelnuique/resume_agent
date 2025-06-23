@@ -1,7 +1,16 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 import os
 from openai import OpenAI
 from state import ResumeState
+from .json_utils import safe_json_parse, create_fallback_response
+
+# Import library-based utilities for validation
+try:
+    from utils.grammar_checker import count_words_sentences, validate_summary_constraints
+    UTILS_AVAILABLE = True
+except ImportError:
+    UTILS_AVAILABLE = False
+    print("⚠️ Summary validation utilities not available")
 
 def update_summary(state: ResumeState) -> ResumeState:
     """
@@ -22,81 +31,119 @@ def update_summary(state: ResumeState) -> ResumeState:
         CRITICAL CONSTRAINTS:
         - MAXIMUM 2-4 sentences total
         - TOTAL word count: 40-70 words
-        - Be concise and impactful
+        - Be concise and impactful - every word must add value
+        - Focus on the most relevant skills and experience for this specific role
 
-        Current Professional Summary:
+        Current Summary:
         {current_summary}
 
-        Job Requirements:
+        Job Requirements Analysis:
         - Role Focus: {job_requirements.get('role_focus', [])}
         - Industry: {job_requirements.get('industry_domain', 'General')}
         - Key Technologies: {job_requirements.get('key_technologies', [])}
         - Essential Requirements: {job_requirements.get('essential_requirements', [])}
-        - Company Culture: {job_requirements.get('company_culture', '')}
-        - Tone: {job_requirements.get('tone_indicators', [])}
+        - Experience Level: {job_requirements.get('experience_level', 'Not specified')}
 
-        CV Context (for truthfulness):
-        - Experience: {[exp.get('position', '') + ' at ' + exp.get('company', '') for exp in state['working_cv']['cv']['sections'].get('experience', [])]}
-        - Education: {[edu.get('degree', '') + ' in ' + edu.get('area', '') for edu in state['working_cv']['cv']['sections'].get('education', [])]}
-        - Skills: {[skill.get('details', '') for skill in state['working_cv']['cv']['sections'].get('skills', [])]}
-
-        Guidelines:
-        1. STRICT LIMIT: 2-4 sentences, 40-70 words total
-        2. Lead with the most relevant experience/skills for this role
-        3. Use keywords from the job advertisement naturally
-        4. Maintain professional tone matching the job posting
-        5. Only mention skills/experience that exist elsewhere in the CV
-        6. Be concise - every word must add value
-        7. Avoid redundant phrases and filler words
-
-        Return a JSON object with:
-        - "summary": list of strings (each sentence - must be 2-4 sentences total)
-        - "word_count": total word count across all sentences
+        Return ONLY a properly formatted JSON object with:
+        - "new_summary": list of strings (each string is a sentence)
+        - "changes_made": list of specific changes made
+        - "word_count": estimated word count
         - "sentence_count": number of sentences
-        - "changes_made": list of specific changes and reasons
 
-        VERIFY: The summary must be 40-70 words and 2-4 sentences.
+        Focus on:
+        1. Quantifiable achievements relevant to the role
+        2. Key technologies mentioned in job requirements
+        3. Experience level and domain expertise
+        4. Value proposition for this specific role
+        
+        Example format:
+        {{
+            "new_summary": ["Sentence 1.", "Sentence 2.", "Sentence 3."],
+            "changes_made": ["Focused on data engineering skills", "Added relevant technologies"],
+            "word_count": 45,
+            "sentence_count": 3
+        }}
         """
         
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are an expert resume writer. Create concise, impactful professional summaries within strict word limits (40-70 words, 2-4 sentences)."},
+                {"role": "system", "content": "You are an expert resume writer. Create concise, impactful professional summaries that strictly adhere to word and sentence limits."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.4
+            temperature=0.3
         )
         
-        import json
-        result = json.loads(response.choices[0].message.content)
-        new_summary = result['summary']
-        word_count = result.get('word_count', 0)
-        sentence_count = result.get('sentence_count', 0)
-        changes_made = result['changes_made']
+        result = safe_json_parse(response.choices[0].message.content, "update_summary")
         
-        # Validate constraints
-        actual_word_count = sum(len(sentence.split()) for sentence in new_summary)
-        actual_sentence_count = len(new_summary)
+        if result is None:
+            fallback_data = {
+                'new_summary': current_summary,
+                'changes_made': ["Summary update failed - using original"],
+                'word_count': 0,
+                'sentence_count': 0
+            }
+            result = create_fallback_response("update_summary", fallback_data)
         
-        if actual_word_count < 40 or actual_word_count > 70:
-            print(f"   ⚠️ Word count ({actual_word_count}) outside target range (40-70)")
+        new_summary = result.get('new_summary', current_summary)
+        changes_made = result.get('changes_made', [])
+        llm_word_count = result.get('word_count', 0)
+        llm_sentence_count = result.get('sentence_count', 0)
         
-        if actual_sentence_count < 2 or actual_sentence_count > 4:
-            print(f"   ⚠️ Sentence count ({actual_sentence_count}) outside target range (2-4)")
+        # Use library-based validation if available
+        if UTILS_AVAILABLE and new_summary:
+            validation_result = validate_summary_constraints(new_summary)
+            actual_word_count = validation_result['words']
+            actual_sentence_count = validation_result['sentences']
+            
+            print(f"   📊 Length validation:")
+            print(f"     - LLM estimated: {llm_word_count} words, {llm_sentence_count} sentences")
+            print(f"     - Actual count: {actual_word_count} words, {actual_sentence_count} sentences")
+            
+            if not validation_result['valid']:
+                print(f"   ⚠️ Constraint violations:")
+                for issue in validation_result['issues']:
+                    print(f"     - {issue}")
+                
+                # If constraints are significantly violated, try a simpler approach
+                if actual_word_count > 80 or actual_sentence_count > 5:
+                    print("   🔄 Attempting to fix constraint violations...")
+                    # Take first 2-3 sentences and trim if needed
+                    if len(new_summary) > 3:
+                        new_summary = new_summary[:3]
+                    
+                    # Re-validate
+                    validation_result = validate_summary_constraints(new_summary)
+                    actual_word_count = validation_result['words']
+                    actual_sentence_count = validation_result['sentences']
+                    print(f"   📊 After trimming: {actual_word_count} words, {actual_sentence_count} sentences")
+        else:
+            # Fallback counting if utils not available
+            full_text = ' '.join(new_summary) if isinstance(new_summary, list) else str(new_summary)
+            actual_word_count = len(full_text.split())
+            actual_sentence_count = len(new_summary) if isinstance(new_summary, list) else 1
         
-        # Update the professional summary
+        # Apply the updated summary
         state['working_cv']['cv']['sections']['professional_summary'] = new_summary
         state['summary_updated'] = True
         
         print("✅ Professional summary updated successfully")
-        print(f"   📊 Length: {actual_word_count} words, {actual_sentence_count} sentences")
-        print("   Changes made:")
+        print(f"   📊 Final metrics: {actual_word_count} words, {actual_sentence_count} sentences")
+        print("   📝 Changes made:")
         for change in changes_made:
-            print(f"   - {change}")
+            print(f"     - {change}")
+        
+        # Show constraint compliance
+        if UTILS_AVAILABLE:
+            if 40 <= actual_word_count <= 70 and 2 <= actual_sentence_count <= 4:
+                print("   ✅ All constraints satisfied")
+            else:
+                print("   ⚠️ Some constraints may not be fully satisfied")
+        
+        return state
         
     except Exception as e:
-        error_msg = f"Error updating professional summary: {str(e)}"
-        print(f"❌ {error_msg}")
-        state['errors'].append(error_msg)
-    
-    return state
+        print(f"❌ Summary update failed: {str(e)}")
+        print("   Keeping original summary...")
+        state['summary_updated'] = True
+        return state
