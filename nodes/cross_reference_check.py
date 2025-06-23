@@ -3,111 +3,102 @@ Cross-reference validation using library-based utilities.
 Provides cost-effective consistency checking between CV sections.
 """
 
-import os
 from typing import Dict, Any, List
+import os
+from openai import OpenAI
 from state import ResumeState
-
-# Import library-based utilities
-try:
-    from utils.cross_reference_validator import generate_consistency_report, suggest_improvements
-    from utils.date_validator import validate_experience_dates, validate_education_dates
-    UTILS_AVAILABLE = True
-except ImportError:
-    UTILS_AVAILABLE = False
-    print("⚠️ Cross-reference validation utilities not available")
+from .json_utils import safe_json_parse, create_fallback_response
 
 def cross_reference_check(state: ResumeState) -> ResumeState:
     """
-    Validate consistency between different sections using library-based tools.
+    Cross-reference check to ensure consistency between sections.
     """
-    print("🔍 Cross-referencing sections for consistency...")
-    
-    if not UTILS_AVAILABLE:
-        print("   ⚠️ Library-based validation not available, skipping...")
-        state['cross_reference_checked'] = True
-        return state
+    print("🔍 Performing cross-reference consistency check...")
     
     try:
-        working_cv = state['working_cv']['cv']
-        sections = working_cv.get('sections', {})
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         
-        # Generate comprehensive consistency report
-        consistency_report = generate_consistency_report(working_cv)
+        working_cv = state['working_cv']['cv']['sections']
         
-        # Validate dates in experience and education
-        date_errors = []
-        if 'experience' in sections:
-            exp_errors = validate_experience_dates(sections['experience'])
-            date_errors.extend(exp_errors)
+        prompt = f"""
+        Perform a cross-reference consistency check on this CV to identify any unsupported claims or inconsistencies.
+
+        CV Sections:
+        Professional Summary: {working_cv.get('professional_summary', [])}
+        Experience: {working_cv.get('experience', [])}
+        Projects: {working_cv.get('projects', [])}
+        Education: {working_cv.get('education', [])}
+        Skills: {working_cv.get('skills', [])}
+
+        Check for:
+        1. Skills mentioned in summary that aren't supported by experience/projects/education
+        2. Technologies claimed in skills that aren't demonstrated in experience/projects
+        3. Achievements in summary that aren't backed by specific examples in experience/projects
+        4. Inconsistent terminology across sections
+        5. Years of experience claims that don't match actual experience timeline
+
+        Return ONLY a properly formatted JSON object (no additional text) with:
+        - "inconsistencies": list of specific inconsistencies found
+        - "unsupported_claims": list of claims that need supporting evidence
+        - "recommendations": list of specific fixes to make
+        - "severity": "high", "medium", or "low" based on impact on credibility
         
-        if 'education' in sections:
-            edu_errors = validate_education_dates(sections['education'])
-            date_errors.extend(edu_errors)
+        Example format:
+        {{
+            "inconsistencies": [],
+            "unsupported_claims": [],
+            "recommendations": [],
+            "severity": "low"
+        }}
+        """
         
-        # Get improvement suggestions
-        suggestions = suggest_improvements(working_cv)
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are an expert resume reviewer. Identify inconsistencies and unsupported claims that could hurt credibility."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2
+        )
         
-        # Combine all validation results
-        all_issues = consistency_report['all_issues'] + date_errors
-        critical_issues = consistency_report['critical_issues']
-        warnings = consistency_report['warnings'] + date_errors
+        result = safe_json_parse(response.choices[0].message.content, "cross_reference_check")
         
-        # Update state with validation results
+        if result is None:
+            # Provide fallback behavior - assume no critical issues
+            fallback_data = {
+                'inconsistencies': [],
+                'unsupported_claims': [],
+                'recommendations': ['Cross-reference check could not be completed - manual review recommended'],
+                'severity': 'low'
+            }
+            result = create_fallback_response("cross_reference_check", fallback_data)
+        
+        inconsistencies = result.get('inconsistencies', [])
+        unsupported_claims = result.get('unsupported_claims', [])
+        recommendations = result.get('recommendations', [])
+        severity = result.get('severity', 'low')
+        
+        # Add to warnings or errors based on severity
+        if severity == 'high':
+            state['errors'].extend(inconsistencies + unsupported_claims)
+        else:
+            state['warnings'].extend(inconsistencies + unsupported_claims)
+        
         state['cross_reference_checked'] = True
         
-        # Store validation results for potential use by other functions
-        if not hasattr(state, 'validation_results'):
-            state['validation_results'] = {}
+        print("✅ Cross-reference check completed")
+        print(f"   Severity: {severity}")
+        print(f"   Found {len(inconsistencies)} inconsistencies")
+        print(f"   Found {len(unsupported_claims)} unsupported claims")
         
-        state['validation_results']['consistency'] = {
-            'total_issues': len(all_issues),
-            'critical_issues': critical_issues,
-            'warnings': warnings,
-            'suggestions': suggestions,
-            'validation_passed': len(critical_issues) == 0
-        }
-        
-        # Report results
-        if all_issues:
-            print("✅ Cross-reference checking completed with findings")
-            print(f"   📊 Total issues found: {len(all_issues)}")
-            print(f"   🚨 Critical issues: {len(critical_issues)}")
-            print(f"   ⚠️ Warnings: {len(warnings)}")
-            
-            if critical_issues:
-                print("   🚨 Critical Issues:")
-                for issue in critical_issues[:3]:  # Show first 3
-                    print(f"     - {issue}")
-                if len(critical_issues) > 3:
-                    print(f"     ... and {len(critical_issues) - 3} more")
-            
-            if warnings:
-                print("   ⚠️ Warnings:")
-                for warning in warnings[:3]:  # Show first 3
-                    print(f"     - {warning}")
-                if len(warnings) > 3:
-                    print(f"     ... and {len(warnings) - 3} more")
-        else:
-            print("✅ Cross-reference checking completed - no issues found")
-        
-        # Show improvement suggestions
-        if suggestions:
-            print("   💡 Suggestions for improvement:")
-            for suggestion in suggestions[:3]:  # Show first 3
-                print(f"     - {suggestion}")
-            if len(suggestions) > 3:
-                print(f"     ... and {len(suggestions) - 3} more")
-        
-        # Technology consistency check
-        if 'skills' in sections and 'experience' in sections:
-            skills_count = len(sections['skills']) if sections['skills'] else 0
-            exp_count = len(sections['experience']) if sections['experience'] else 0
-            print(f"   📋 Section summary: {skills_count} skills, {exp_count} experience entries")
-        
-        return state
+        if recommendations:
+            print("   Recommendations:")
+            for rec in recommendations[:3]:  # Show first 3
+                print(f"   - {rec}")
         
     except Exception as e:
-        print(f"❌ Cross-reference checking failed: {str(e)}")
-        print("   Continuing without detailed cross-reference validation...")
-        state['cross_reference_checked'] = True
-        return state 
+        error_msg = f"Error in cross-reference check: {str(e)}"
+        print(f"❌ {error_msg}")
+        state['errors'].append(error_msg)
+    
+    return state 
