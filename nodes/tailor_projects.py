@@ -44,10 +44,10 @@ def tailor_projects(state: ResumeState) -> ResumeState:
         - "changes_summary": brief explanation of reordering and content changes
         
         Example format:
-        {
+        {{
             "tailored_projects": [...],
             "changes_summary": "Brief description of changes made"
-        }
+        }}
         """
         
         response = client.chat.completions.create(

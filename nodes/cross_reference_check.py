@@ -39,12 +39,12 @@ def cross_reference_check(state: ResumeState) -> ResumeState:
         - "severity": "high", "medium", or "low" based on impact on credibility
         
         Example format:
-        {
+        {{
             "inconsistencies": [],
             "unsupported_claims": [],
             "recommendations": [],
             "severity": "low"
-        }
+        }}
         """
         
         response = client.chat.completions.create(

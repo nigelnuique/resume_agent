@@ -65,10 +65,17 @@ def grammar_tone_check(state: ResumeState) -> ResumeState:
         5. Use active voice where appropriate
         6. Maintain Australian English spelling
 
-        Return a JSON object with:
-        - "corrected_content": list of tuples [(section, index, corrected_text)]
+        Return ONLY a properly formatted JSON object (no additional text) with:
+        - "corrected_content": list of arrays [[section, index, corrected_text]]
         - "changes_made": list of specific grammar/tone improvements
         - "tone_adjustments": description of tone modifications made
+        
+        Example format:
+        {{
+            "corrected_content": [["professional_summary", 0, "corrected text here"]],
+            "changes_made": ["Fixed grammar in summary"],
+            "tone_adjustments": "Made tone more technical"
+        }}
         """
         
         response = client.chat.completions.create(
