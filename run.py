@@ -53,16 +53,16 @@ def setup_workflow() -> StateGraph:
     # Define the workflow sequence
     workflow.set_entry_point("parse_job_ad")
     
-    # Linear workflow with conditional branching for error handling
-    workflow.add_edge("parse_job_ad", "reorder_sections")
-    workflow.add_edge("reorder_sections", "update_summary")
+    # Workflow: Parse job → Tailor individual sections → Reorder/optimize → Final checks
+    workflow.add_edge("parse_job_ad", "update_summary")
     workflow.add_edge("update_summary", "tailor_experience")
     workflow.add_edge("tailor_experience", "tailor_projects")
     workflow.add_edge("tailor_projects", "tailor_education")
-    workflow.add_edge("tailor_education", "tailor_skills")
-    workflow.add_edge("tailor_skills", "tailor_certifications")
+    workflow.add_edge("tailor_education", "tailor_certifications")
     workflow.add_edge("tailor_certifications", "tailor_extracurricular")
-    workflow.add_edge("tailor_extracurricular", "cross_reference_check")
+    workflow.add_edge("tailor_extracurricular", "tailor_skills")
+    workflow.add_edge("tailor_skills", "reorder_sections")
+    workflow.add_edge("reorder_sections", "cross_reference_check")
     workflow.add_edge("cross_reference_check", "resolve_inconsistencies")
     workflow.add_edge("resolve_inconsistencies", "grammar_tone_check")
     workflow.add_edge("grammar_tone_check", "convert_au_english")
@@ -75,6 +75,9 @@ def load_initial_data() -> ResumeState:
     """Load master CV and job advertisement into initial state."""
     print("📁 Loading initial data...")
     
+    # Ensure we start with a clean slate - remove any existing working CV
+    cleanup_previous_working_files()
+    
     state = create_initial_state()
     
     try:
@@ -83,6 +86,9 @@ def load_initial_data() -> ResumeState:
         state['master_cv'] = master_cv
         state['working_cv'] = copy.deepcopy(master_cv)  # Create working copy
         print(f"   ✅ Loaded master CV: {master_cv['cv']['name']}")
+        
+        # Validate that all sections were copied correctly
+        validate_working_cv_sections(state)
         
         # Load job advertisement
         job_ad = load_job_ad_from_file("job_advertisement.txt")
@@ -95,6 +101,63 @@ def load_initial_data() -> ResumeState:
         state['errors'].append(error_msg)
     
     return state
+
+def cleanup_previous_working_files() -> None:
+    """Remove any existing working files to ensure fresh start."""
+    working_files = ["working_CV.yaml"]
+    
+    for file in working_files:
+        if os.path.exists(file):
+            try:
+                os.remove(file)
+                print(f"   🧹 Removed existing {file}")
+            except Exception as e:
+                print(f"   ⚠️ Could not remove {file}: {e}")
+
+def validate_working_cv_sections(state: ResumeState) -> None:
+    """Validate that all sections from master CV are present in working CV."""
+    try:
+        master_sections = state['master_cv']['cv']['sections']
+        working_sections = state['working_cv']['cv']['sections']
+        
+        # List of sections that should be preserved
+        critical_sections = ['education', 'certifications', 'extracurricular', 'experience', 'projects', 'skills']
+        
+        missing_sections = []
+        empty_sections = []
+        
+        for section in critical_sections:
+            if section in master_sections:
+                master_content = master_sections[section]
+                working_content = working_sections.get(section)
+                
+                if working_content is None:
+                    missing_sections.append(section)
+                    # Copy the section from master
+                    working_sections[section] = copy.deepcopy(master_content)
+                elif not working_content and master_content:
+                    empty_sections.append(section)
+                    # Copy the section from master
+                    working_sections[section] = copy.deepcopy(master_content)
+        
+        if missing_sections or empty_sections:
+            print(f"   🔧 Fixed missing/empty sections: {missing_sections + empty_sections}")
+            
+        # Log section counts for verification
+        section_counts = {}
+        for section in critical_sections:
+            if section in working_sections and working_sections[section]:
+                if isinstance(working_sections[section], list):
+                    section_counts[section] = len(working_sections[section])
+                else:
+                    section_counts[section] = "present"
+        
+        print(f"   📊 Working CV sections: {section_counts}")
+        
+    except Exception as e:
+        error_msg = f"Error validating working CV sections: {str(e)}"
+        print(f"   ⚠️ {error_msg}")
+        state['warnings'].append(error_msg)
 
 def save_working_cv(state: ResumeState, filename: str = "working_CV.yaml") -> None:
     """Save the working CV to file."""

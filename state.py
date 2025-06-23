@@ -23,6 +23,8 @@ class ResumeState(TypedDict):
     projects_tailored: bool
     education_tailored: bool
     skills_tailored: bool
+    certifications_tailored: bool
+    extracurricular_tailored: bool
     cross_reference_checked: bool
     inconsistencies_resolved: bool
     grammar_checked: bool
@@ -50,6 +52,8 @@ def create_initial_state() -> ResumeState:
         projects_tailored=False,
         education_tailored=False,
         skills_tailored=False,
+        certifications_tailored=False,
+        extracurricular_tailored=False,
         cross_reference_checked=False,
         inconsistencies_resolved=False,
         grammar_checked=False,
