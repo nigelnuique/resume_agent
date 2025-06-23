@@ -215,6 +215,68 @@ def fix_experience_hallucinations(working_cv: Dict) -> List[str]:
     
     return changes_made
 
+def fix_project_inflated_claims(working_cv: Dict) -> List[str]:
+    """
+    Fix inflated claims in projects section about professional collaboration and production deployment.
+    """
+    changes_made = []
+    
+    if 'projects' not in working_cv:
+        return changes_made
+    
+    for project in working_cv['projects']:
+        if 'highlights' in project:
+            updated_highlights = []
+            
+            for highlight in project['highlights']:
+                original_highlight = highlight
+                updated_highlight = highlight
+                
+                # Remove inflated collaboration claims for academic/personal projects
+                problematic_patterns = [
+                    r'collaborated with data scientists to deploy[^.]*in production environments',
+                    r'collaborated with data scientists and engineers to[^.]*machine learning pipelines',
+                    r'collaborated with stakeholders for[^.]*deployment',
+                    r'deployed and tested[^.]*models in production environments',
+                    r'collaborated with[^.]*data scientists[^.]*production',
+                    r'collaborated with[^.]*engineers[^.]*enhance[^.]*pipelines'
+                ]
+                
+                for pattern in problematic_patterns:
+                    if re.search(pattern, updated_highlight.lower()):
+                        # Replace with more honest alternatives
+                        if 'collaborated with data scientists to deploy' in updated_highlight.lower():
+                            updated_highlight = re.sub(
+                                r'collaborated with data scientists to deploy and test the models in production environments',
+                                'developed and tested machine learning models achieving high accuracy',
+                                updated_highlight,
+                                flags=re.IGNORECASE
+                            )
+                        elif 'collaborated with data scientists and engineers to enhance' in updated_highlight.lower():
+                            updated_highlight = re.sub(
+                                r'collaborated with data scientists and engineers to enhance machine learning pipelines',
+                                'developed NLP processing pipeline for task extraction',
+                                updated_highlight,
+                                flags=re.IGNORECASE
+                            )
+                        elif 'collaborated with stakeholders for' in updated_highlight.lower():
+                            updated_highlight = re.sub(
+                                r'collaborated with stakeholders for technical discovery and deployment of the web application',
+                                'implemented web application with job recommendation functionality',
+                                updated_highlight,
+                                flags=re.IGNORECASE
+                            )
+                        
+                        changes_made.append(f"Fixed inflated project claim: {original_highlight[:50]}...")
+                        break
+                
+                updated_highlights.append(updated_highlight)
+            
+            if any(changes_made):
+                project['highlights'] = updated_highlights
+    
+    return changes_made
+
 def cross_reference_check(state: ResumeState) -> ResumeState:
     """
     Cross-reference check to ensure consistency between sections and fix inconsistencies.
@@ -251,7 +313,14 @@ def cross_reference_check(state: ResumeState) -> ResumeState:
             all_issues.append("Found hallucinated claims in experience section")
             print("   🔧 Fixed experience hallucinations")
         
-        # 4. Try LLM-based analysis (optional)
+        # 4. Fix project inflated claims
+        project_changes = fix_project_inflated_claims(working_cv)
+        all_changes.extend(project_changes)
+        if project_changes:
+            all_issues.append("Found inflated collaboration claims in projects section")
+            print("   🔧 Fixed project inflated claims")
+        
+        # 5. Try LLM-based analysis (optional)
         try:
             client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
             

@@ -40,6 +40,14 @@ def tailor_projects(state: ResumeState) -> ResumeState:
         4. Keep all factual information accurate
         5. Maintain project timelines and links
 
+        CRITICAL TRUTHFULNESS GUIDELINES FOR PROJECTS:
+        - These are likely ACADEMIC or PERSONAL projects, not professional work
+        - DO NOT add claims about "collaborating with Data Scientists" unless explicitly mentioned in original
+        - DO NOT claim "production environments" or "production deployment" for academic projects
+        - DO NOT add "collaborated with stakeholders" for personal/academic projects
+        - Use honest language: "Developed", "Implemented", "Built", "Analyzed" rather than inflated collaboration claims
+        - Focus on technical skills demonstrated and results achieved, not imaginary professional collaboration
+
         CRITICAL: Return ONLY the top 4 most relevant projects, not all projects.
 
         Return ONLY a properly formatted JSON object (no additional text) with:
@@ -56,12 +64,12 @@ def tailor_projects(state: ResumeState) -> ResumeState:
         """
         
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",  # Switched to 3.5-turbo for efficiency
+            model="gpt-4",  # Use GPT-4 for better truthfulness
             messages=[
-                {"role": "system", "content": "You are an expert resume writer. Select and tailor the most relevant projects to showcase skills matching job requirements."},
+                {"role": "system", "content": "You are an expert resume writer who prioritizes TRUTHFULNESS. Never add inflated claims about professional collaboration or production deployment for academic/personal projects. Focus on actual technical skills demonstrated."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.4
+            temperature=0.3
         )
         
         result = safe_json_parse(response.choices[0].message.content, "tailor_projects")
