@@ -37,9 +37,15 @@ def update_summary(state: ResumeState) -> ResumeState:
         - TOTAL word count: 40-70 words
         - Be concise and impactful - every word must add value
         - Focus on the most relevant skills and experience for this specific role
+        - BE HONEST about experience level - distinguish between professional work experience vs academic/project experience
 
         Current Summary:
         {current_summary}
+
+        Candidate's Actual Experience Context:
+        Experience: {state['working_cv']['cv']['sections'].get('experience', [])}
+        Projects: {state['working_cv']['cv']['sections'].get('projects', [])}
+        Education: {state['working_cv']['cv']['sections'].get('education', [])}
 
         Job Requirements Analysis:
         - Role Focus: {job_requirements.get('role_focus', [])}
@@ -48,6 +54,13 @@ def update_summary(state: ResumeState) -> ResumeState:
         - Essential Requirements: {job_requirements.get('essential_requirements', [])}
         - Experience Level: {job_requirements.get('experience_level', 'Not specified')}
 
+        IMPORTANT TRUTHFULNESS GUIDELINES:
+        - Only claim professional experience that is actually demonstrated in the work history
+        - If the candidate's main professional experience is in a different field (e.g., hardware testing), acknowledge that while highlighting transferable skills
+        - Academic projects and personal projects should be mentioned as "experience with" or "background in" rather than claiming years of professional experience
+        - Do not exaggerate years of experience in specific domains unless clearly supported by professional work history
+        - Focus on potential and transferable skills rather than making false claims about professional experience
+
         Return ONLY a properly formatted JSON object with:
         - "new_summary": list of strings (each string is a sentence)
         - "changes_made": list of specific changes made
@@ -55,15 +68,15 @@ def update_summary(state: ResumeState) -> ResumeState:
         - "sentence_count": number of sentences
 
         Focus on:
-        1. Quantifiable achievements relevant to the role
-        2. Key technologies mentioned in job requirements
-        3. Experience level and domain expertise
-        4. Value proposition for this specific role
+        1. Actual professional background and transferable skills
+        2. Key technologies mentioned in job requirements that the candidate has used
+        3. Educational background and relevant projects
+        4. Potential and enthusiasm for the role rather than inflated experience claims
         
         Example format:
         {{
             "new_summary": ["Sentence 1.", "Sentence 2.", "Sentence 3."],
-            "changes_made": ["Focused on data engineering skills", "Added relevant technologies"],
+            "changes_made": ["Focused on transferable skills", "Highlighted relevant education and projects"],
             "word_count": 45,
             "sentence_count": 3
         }}
@@ -72,7 +85,7 @@ def update_summary(state: ResumeState) -> ResumeState:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are an expert resume writer. Create concise, impactful professional summaries that strictly adhere to word and sentence limits."},
+                {"role": "system", "content": "You are an expert resume writer. Create honest, concise professional summaries that distinguish between professional work experience and academic/project experience. Never exaggerate experience claims."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3
