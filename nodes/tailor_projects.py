@@ -2,6 +2,7 @@ from typing import Dict, Any, List
 import os
 from openai import OpenAI
 from state import ResumeState
+from .json_utils import safe_json_parse, create_fallback_response
 
 def tailor_projects(state: ResumeState) -> ResumeState:
     """
@@ -38,9 +39,15 @@ def tailor_projects(state: ResumeState) -> ResumeState:
         4. Keep all factual information accurate
         5. Maintain project timelines and links
 
-        Return a JSON object with:
+        Return ONLY a properly formatted JSON object (no additional text) with:
         - "tailored_projects": list of project entries in new order with modified content
         - "changes_summary": brief explanation of reordering and content changes
+        
+        Example format:
+        {
+            "tailored_projects": [...],
+            "changes_summary": "Brief description of changes made"
+        }
         """
         
         response = client.chat.completions.create(
@@ -52,10 +59,18 @@ def tailor_projects(state: ResumeState) -> ResumeState:
             temperature=0.4
         )
         
-        import json
-        result = json.loads(response.choices[0].message.content)
-        tailored_projects = result['tailored_projects']
-        changes_summary = result['changes_summary']
+        result = safe_json_parse(response.choices[0].message.content, "tailor_projects")
+        
+        if result is None:
+            # Provide fallback behavior - keep original projects
+            fallback_data = {
+                'tailored_projects': state['working_cv']['cv']['sections'].get('projects', []),
+                'changes_summary': 'No changes made due to parsing error - original projects retained'
+            }
+            result = create_fallback_response("tailor_projects", fallback_data)
+        
+        tailored_projects = result.get('tailored_projects', state['working_cv']['cv']['sections'].get('projects', []))
+        changes_summary = result.get('changes_summary', 'No changes summary available')
         
         # Update the projects section
         state['working_cv']['cv']['sections']['projects'] = tailored_projects

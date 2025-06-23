@@ -2,6 +2,7 @@ from typing import Dict, Any, List
 import os
 from openai import OpenAI
 from state import ResumeState
+from .json_utils import safe_json_parse, create_fallback_response
 
 def cross_reference_check(state: ResumeState) -> ResumeState:
     """
@@ -31,11 +32,19 @@ def cross_reference_check(state: ResumeState) -> ResumeState:
         4. Inconsistent terminology across sections
         5. Years of experience claims that don't match actual experience timeline
 
-        Return a JSON object with:
+        Return ONLY a properly formatted JSON object (no additional text) with:
         - "inconsistencies": list of specific inconsistencies found
         - "unsupported_claims": list of claims that need supporting evidence
         - "recommendations": list of specific fixes to make
         - "severity": "high", "medium", or "low" based on impact on credibility
+        
+        Example format:
+        {
+            "inconsistencies": [],
+            "unsupported_claims": [],
+            "recommendations": [],
+            "severity": "low"
+        }
         """
         
         response = client.chat.completions.create(
@@ -47,8 +56,18 @@ def cross_reference_check(state: ResumeState) -> ResumeState:
             temperature=0.2
         )
         
-        import json
-        result = json.loads(response.choices[0].message.content)
+        result = safe_json_parse(response.choices[0].message.content, "cross_reference_check")
+        
+        if result is None:
+            # Provide fallback behavior - assume no critical issues
+            fallback_data = {
+                'inconsistencies': [],
+                'unsupported_claims': [],
+                'recommendations': ['Cross-reference check could not be completed - manual review recommended'],
+                'severity': 'low'
+            }
+            result = create_fallback_response("cross_reference_check", fallback_data)
+        
         inconsistencies = result.get('inconsistencies', [])
         unsupported_claims = result.get('unsupported_claims', [])
         recommendations = result.get('recommendations', [])

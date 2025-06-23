@@ -2,6 +2,7 @@ from typing import Dict, Any, List
 import os
 from openai import OpenAI
 from state import ResumeState
+from .json_utils import safe_json_parse, create_fallback_response
 
 def grammar_tone_check(state: ResumeState) -> ResumeState:
     """
@@ -79,17 +80,20 @@ def grammar_tone_check(state: ResumeState) -> ResumeState:
             temperature=0.3
         )
         
-        import json
-        try:
-            result = json.loads(response.choices[0].message.content)
-            corrected_content = result.get('corrected_content', [])
-            changes_made = result.get('changes_made', [])
-            tone_adjustments = result.get('tone_adjustments', '')
-        except json.JSONDecodeError as e:
-            print(f"⚠️ JSON parsing error in grammar check, skipping detailed corrections: {e}")
-            corrected_content = []
-            changes_made = ["Grammar check completed with simplified processing"]
-            tone_adjustments = "Unable to parse detailed tone adjustments"
+        result = safe_json_parse(response.choices[0].message.content, "grammar_tone_check")
+        
+        if result is None:
+            # Provide fallback behavior
+            fallback_data = {
+                'corrected_content': [],
+                'changes_made': ["Grammar check completed with simplified processing"],
+                'tone_adjustments': "Unable to parse detailed tone adjustments"
+            }
+            result = create_fallback_response("grammar_tone_check", fallback_data)
+        
+        corrected_content = result.get('corrected_content', [])
+        changes_made = result.get('changes_made', [])
+        tone_adjustments = result.get('tone_adjustments', '')
         
         # Apply corrections to working CV
         changes_applied = 0
