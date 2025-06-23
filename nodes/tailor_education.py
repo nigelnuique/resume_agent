@@ -5,10 +5,11 @@ from state import ResumeState
 
 def tailor_education(state: ResumeState) -> ResumeState:
     """
-    Tailor education section by emphasizing relevant coursework (max 5 per entry) and achievements.
+    Tailor education section by emphasizing relevant coursework and achievements.
+    Formats coursework as "Relevant coursework: Course 1, Course 2, ..." instead of individual bullets.
     CRITICAL: Only modifies highlights - never changes institutions, degrees, or dates.
     """
-    print("🎓 Tailoring education section (limiting to 5 coursework items per entry)...")
+    print("🎓 Tailoring education section (consolidating coursework into single lines)...")
     
     try:
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -49,31 +50,41 @@ def tailor_education(state: ResumeState) -> ResumeState:
         1. ONLY modify the highlights content - nothing else
         2. DO NOT change or invent institution names, degrees, areas, or dates
         3. For each education entry, provide improved highlights that:
-           - Select ONLY the 5 most relevant coursework/achievement items
-           - Emphasize coursework that aligns with job requirements
+           - Format relevant coursework as ONE line: "Relevant coursework: Course 1, Course 2, Course 3, Course 4, Course 5"
+           - Select ONLY the 5 most relevant courses that align with job requirements
+           - Include other achievements (GPA, scholarships, etc.) as separate highlights
            - Focus on skills and knowledge gained that apply to the target role
-           - Remove less relevant coursework
         4. Keep highlights factual and realistic
-        5. Maximum 5 highlight items per education entry
+        5. IMPORTANT: Coursework should be formatted as a single comma-separated line, not individual bullet points
+
+        FORMATTING EXAMPLE:
+        Instead of:
+        - "Course 1"
+        - "Course 2" 
+        - "Course 3"
+        
+        Use:
+        - "Relevant coursework: Course 1, Course 2, Course 3"
+        - "Other achievement (e.g., GPA, scholarship)"
 
         Return a JSON object with:
-        - "updated_highlights": list of objects with "entry_index" and "new_highlights" (max 5 items each)
+        - "updated_highlights": list of objects with "entry_index" and "new_highlights" 
         - "changes_summary": brief explanation of what was emphasized/removed
         
         Example format:
         {{
             "updated_highlights": [
-                {{"entry_index": 0, "new_highlights": ["item1", "item2", "item3"]}},
-                {{"entry_index": 1, "new_highlights": ["item1", "item2"]}}
+                {{"entry_index": 0, "new_highlights": ["Relevant coursework: Data Science, Machine Learning, Statistics, Python Programming, Database Systems", "GPA: 3.5/4.0", "Academic scholarship"]}},
+                {{"entry_index": 1, "new_highlights": ["Relevant coursework: Electronics, Programming, Circuit Design", "Thesis: Solar System Project"]}}
             ],
-            "changes_summary": "Emphasized relevant coursework"
+            "changes_summary": "Consolidated coursework into single lines and emphasized relevant courses"
         }}
         """
         
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are an expert resume writer. ONLY modify education highlights - never change institutions, degrees, or dates. Keep all information factually accurate."},
+                {"role": "system", "content": "You are an expert resume writer. ONLY modify education highlights - never change institutions, degrees, or dates. CRITICAL: Consolidate coursework into single 'Relevant coursework: Course 1, Course 2, ...' lines instead of individual bullet points."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3
@@ -94,8 +105,8 @@ def tailor_education(state: ResumeState) -> ResumeState:
             for highlight_update in updated_highlights:
                 if highlight_update.get('entry_index') == i:
                     new_highlights = highlight_update.get('new_highlights', [])
-                    # Limit to 5 highlights maximum
-                    updated_entry['highlights'] = new_highlights[:5]
+                    # Apply the new highlights (coursework now consolidated)
+                    updated_entry['highlights'] = new_highlights
                     break
             
             updated_education.append(updated_entry)
@@ -107,6 +118,7 @@ def tailor_education(state: ResumeState) -> ResumeState:
         print("✅ Education section tailored successfully")
         print(f"   - Education entries: {len(updated_education)}")
         print(f"   - Real institutions preserved: {', '.join([edu.get('institution', 'Unknown') for edu in updated_education])}")
+        print(f"   - Coursework consolidated into single lines per entry")
         print(f"   - Summary: {changes_summary}")
         
     except Exception as e:
