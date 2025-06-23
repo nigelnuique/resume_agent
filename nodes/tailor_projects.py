@@ -47,6 +47,13 @@ def tailor_projects(state: ResumeState) -> ResumeState:
         - DO NOT add "collaborated with stakeholders" for personal/academic projects
         - Use honest language: "Developed", "Implemented", "Built", "Analyzed" rather than inflated collaboration claims
         - Focus on technical skills demonstrated and results achieved, not imaginary professional collaboration
+        
+        TECHNOLOGY PRESERVATION RULES:
+        - NEVER add technologies that were not mentioned in the original project description
+        - If original project used only SQL, do NOT add Python, pandas, or other technologies
+        - If original project used specific tools/languages, preserve that exact technology stack
+        - Do not inflate the technology stack to match job requirements if it's not accurate
+        - Example: If original says "using SQL", do NOT change to "using SQL, Python, and pandas"
 
         CRITICAL: Return ONLY the top 4 most relevant projects, not all projects.
 
