@@ -6,9 +6,9 @@ from .json_utils import safe_json_parse, create_fallback_response
 
 def tailor_projects(state: ResumeState) -> ResumeState:
     """
-    Tailor projects section by reordering entries and modifying highlights.
+    Tailor projects section by selecting top 4 most relevant projects and optimizing their content.
     """
-    print("🚀 Tailoring projects section...")
+    print("🚀 Tailoring projects section (limiting to 4 most relevant)...")
     
     try:
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -17,9 +17,9 @@ def tailor_projects(state: ResumeState) -> ResumeState:
         job_requirements = state['job_requirements']
         
         prompt = f"""
-        Tailor the projects section for this job application by reordering entries and modifying highlights.
+        Select the 4 MOST RELEVANT projects for this job and tailor their content.
 
-        Current Projects:
+        Current Projects ({len(current_projects)} total):
         {current_projects}
 
         Job Requirements:
@@ -29,31 +29,36 @@ def tailor_projects(state: ResumeState) -> ResumeState:
         - Essential Requirements: {job_requirements.get('essential_requirements', [])}
 
         Instructions:
-        1. Reorder projects by relevance to the target role (most relevant first)
-        2. For each project, modify highlights and summary to:
-           - Emphasize technical skills and outcomes relevant to the target role
+        1. Select ONLY the 4 most relevant projects (or fewer if less than 4 exist)
+        2. Order them by relevance to the target role (most relevant first)
+        3. For each selected project, optimize:
+           - Summary to emphasize relevant outcomes and technologies
+           - Highlights to showcase skills matching job requirements
            - Use keywords from the job advertisement naturally
            - Add quantification and impact metrics where possible
-           - Highlight methodologies and tools that match job requirements
-        3. Consider removing less relevant projects if there are many
+           - Remove irrelevant details
         4. Keep all factual information accurate
         5. Maintain project timelines and links
 
+        CRITICAL: Return ONLY the top 4 most relevant projects, not all projects.
+
         Return ONLY a properly formatted JSON object (no additional text) with:
-        - "tailored_projects": list of project entries in new order with modified content
-        - "changes_summary": brief explanation of reordering and content changes
+        - "tailored_projects": list of TOP 4 project entries in relevance order with optimized content
+        - "changes_summary": brief explanation of selection criteria and content changes
+        - "projects_removed": count of how many projects were excluded
         
         Example format:
         {{
             "tailored_projects": [...],
-            "changes_summary": "Brief description of changes made"
+            "changes_summary": "Selected 4 most relevant projects and optimized content",
+            "projects_removed": 2
         }}
         """
         
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",  # Switched to 3.5-turbo for efficiency
             messages=[
-                {"role": "system", "content": "You are an expert resume writer. Tailor project sections to showcase relevant technical skills and achievements."},
+                {"role": "system", "content": "You are an expert resume writer. Select and tailor the most relevant projects to showcase skills matching job requirements."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.4
@@ -62,22 +67,33 @@ def tailor_projects(state: ResumeState) -> ResumeState:
         result = safe_json_parse(response.choices[0].message.content, "tailor_projects")
         
         if result is None:
-            # Provide fallback behavior - keep original projects
+            # Provide fallback behavior - keep original projects but limit to 4
+            original_projects = state['working_cv']['cv']['sections'].get('projects', [])
             fallback_data = {
-                'tailored_projects': state['working_cv']['cv']['sections'].get('projects', []),
-                'changes_summary': 'No changes made due to parsing error - original projects retained'
+                'tailored_projects': original_projects[:4],  # Just take first 4
+                'changes_summary': 'Limited to first 4 projects due to parsing error',
+                'projects_removed': max(0, len(original_projects) - 4)
             }
             result = create_fallback_response("tailor_projects", fallback_data)
         
-        tailored_projects = result.get('tailored_projects', state['working_cv']['cv']['sections'].get('projects', []))
+        tailored_projects = result.get('tailored_projects', state['working_cv']['cv']['sections'].get('projects', [])[:4])
         changes_summary = result.get('changes_summary', 'No changes summary available')
+        projects_removed = result.get('projects_removed', 0)
+        
+        # Ensure we don't exceed 4 projects
+        if len(tailored_projects) > 4:
+            tailored_projects = tailored_projects[:4]
+            projects_removed += len(tailored_projects) - 4
         
         # Update the projects section
         state['working_cv']['cv']['sections']['projects'] = tailored_projects
         state['projects_tailored'] = True
         
         print("✅ Projects section tailored successfully")
-        print(f"   Summary: {changes_summary}")
+        print(f"   - Projects selected: {len(tailored_projects)}")
+        if projects_removed > 0:
+            print(f"   - Projects removed: {projects_removed}")
+        print(f"   - Summary: {changes_summary}")
         
     except Exception as e:
         error_msg = f"Error tailoring projects section: {str(e)}"

@@ -2,12 +2,13 @@ from typing import Dict, Any, List
 import os
 from openai import OpenAI
 from state import ResumeState
+from .json_utils import safe_json_parse, create_fallback_response
 
 def reorder_sections(state: ResumeState) -> ResumeState:
     """
-    Reorder CV sections based on job requirements and relevance.
+    Reorder CV sections based on job requirements and remove irrelevant sections.
     """
-    print("📋 Reordering CV sections...")
+    print("📋 Reordering CV sections and removing irrelevant ones...")
     
     try:
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -17,67 +18,79 @@ def reorder_sections(state: ResumeState) -> ResumeState:
         job_requirements = state['job_requirements']
         
         prompt = f"""
-        Based on this job advertisement analysis and current CV sections, determine the optimal order for CV sections.
+        Based on this job advertisement analysis and current CV sections, determine which sections to KEEP and their optimal order.
 
         Job Requirements:
         - Role Focus: {job_requirements.get('role_focus', [])}
         - Industry: {job_requirements.get('industry_domain', 'General')}
         - Experience Level: {job_requirements.get('experience_level', 'Not specified')}
         - Key Technologies: {job_requirements.get('key_technologies', [])}
+        - Essential Requirements: {job_requirements.get('essential_requirements', [])}
 
         Current CV Sections:
         {current_sections}
 
-        Standard section priority guidelines:
-        1. professional_summary - Always first
-        2. For experienced roles: experience before education
-        3. For technical roles: skills before projects if heavily technical
-        4. For research roles: education and projects higher priority
-        5. projects - Higher if role emphasizes specific project experience
+        Guidelines for section inclusion and ordering:
+        1. professional_summary - Always keep and place first
+        2. skills/experience - Essential for most roles, order based on role type
+        3. projects - Keep if role emphasizes project work or technical skills
+        4. education - Keep for entry-level or academic roles, may remove for senior roles if not relevant
+        5. certifications - Keep only if relevant to role requirements
+        6. extracurricular - Often not relevant for professional roles, remove unless specifically valuable
+        7. publications - Keep only for research/academic roles
+        8. languages - Keep only if mentioned in job requirements or international role
 
         Return a JSON object with:
-        - "section_order": ordered list of section names
-        - "reasoning": brief explanation for the ordering
+        - "sections_to_keep": ordered list of section names to include in final CV
+        - "sections_to_remove": list of section names to remove completely
+        - "reasoning": brief explanation for inclusions and exclusions
 
-        Only include sections that exist in the current CV.
+        Be selective - a focused CV is better than a comprehensive one.
         """
         
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",  # Switched to 3.5-turbo for efficiency
             messages=[
-                {"role": "system", "content": "You are an expert resume writer. Reorder CV sections for maximum impact based on job requirements."},
+                {"role": "system", "content": "You are an expert resume writer. Optimize CV sections for maximum relevance and impact."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3
         )
         
-        import json
-        result = json.loads(response.choices[0].message.content)
-        new_order = result['section_order']
-        reasoning = result['reasoning']
+        result = safe_json_parse(response.choices[0].message.content, "reorder_sections")
         
-        # Reorder sections in working_cv
+        if result is None:
+            # Provide fallback behavior - keep all sections in original order
+            fallback_data = {
+                'sections_to_keep': current_sections,
+                'sections_to_remove': [],
+                'reasoning': 'Kept all sections due to parsing error'
+            }
+            result = create_fallback_response("reorder_sections", fallback_data)
+        
+        sections_to_keep = result.get('sections_to_keep', current_sections)
+        sections_to_remove = result.get('sections_to_remove', [])
+        reasoning = result.get('reasoning', 'No reasoning available')
+        
+        # Create new sections dict with only relevant sections in optimal order
         sections = state['working_cv']['cv']['sections']
-        reordered_sections = {}
+        filtered_sections = {}
         
-        for section_name in new_order:
+        for section_name in sections_to_keep:
             if section_name in sections:
-                reordered_sections[section_name] = sections[section_name]
+                filtered_sections[section_name] = sections[section_name]
         
-        # Add any missing sections at the end
-        for section_name, section_data in sections.items():
-            if section_name not in reordered_sections:
-                reordered_sections[section_name] = section_data
-        
-        state['working_cv']['cv']['sections'] = reordered_sections
+        state['working_cv']['cv']['sections'] = filtered_sections
         state['sections_reordered'] = True
         
-        print("✅ Sections reordered successfully")
-        print(f"   - New order: {' → '.join(new_order)}")
+        print("✅ Sections optimized successfully")
+        print(f"   - Sections kept: {' → '.join(sections_to_keep)}")
+        if sections_to_remove:
+            print(f"   - Sections removed: {', '.join(sections_to_remove)}")
         print(f"   - Reasoning: {reasoning}")
         
     except Exception as e:
-        error_msg = f"Error reordering sections: {str(e)}"
+        error_msg = f"Error optimizing sections: {str(e)}"
         print(f"❌ {error_msg}")
         state['errors'].append(error_msg)
     

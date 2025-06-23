@@ -20,6 +20,8 @@ from nodes.tailor_experience import tailor_experience
 from nodes.tailor_projects import tailor_projects
 from nodes.tailor_education import tailor_education
 from nodes.tailor_skills import tailor_skills
+from nodes.tailor_certifications import tailor_certifications
+from nodes.tailor_extracurricular import tailor_extracurricular
 from nodes.cross_reference_check import cross_reference_check
 from nodes.resolve_inconsistencies import resolve_inconsistencies
 from nodes.grammar_tone_check import grammar_tone_check
@@ -40,6 +42,8 @@ def setup_workflow() -> StateGraph:
     workflow.add_node("tailor_projects", tailor_projects)
     workflow.add_node("tailor_education", tailor_education)
     workflow.add_node("tailor_skills", tailor_skills)
+    workflow.add_node("tailor_certifications", tailor_certifications)
+    workflow.add_node("tailor_extracurricular", tailor_extracurricular)
     workflow.add_node("cross_reference_check", cross_reference_check)
     workflow.add_node("resolve_inconsistencies", resolve_inconsistencies)
     workflow.add_node("grammar_tone_check", grammar_tone_check)
@@ -56,7 +60,9 @@ def setup_workflow() -> StateGraph:
     workflow.add_edge("tailor_experience", "tailor_projects")
     workflow.add_edge("tailor_projects", "tailor_education")
     workflow.add_edge("tailor_education", "tailor_skills")
-    workflow.add_edge("tailor_skills", "cross_reference_check")
+    workflow.add_edge("tailor_skills", "tailor_certifications")
+    workflow.add_edge("tailor_certifications", "tailor_extracurricular")
+    workflow.add_edge("tailor_extracurricular", "cross_reference_check")
     workflow.add_edge("cross_reference_check", "resolve_inconsistencies")
     workflow.add_edge("resolve_inconsistencies", "grammar_tone_check")
     workflow.add_edge("grammar_tone_check", "convert_au_english")
@@ -166,6 +172,8 @@ def print_summary(state: ResumeState) -> None:
         ("Projects tailored", state.get('projects_tailored', False)),
         ("Education tailored", state.get('education_tailored', False)),
         ("Skills tailored", state.get('skills_tailored', False)),
+        ("Certifications tailored", state.get('certifications_tailored', False)),
+        ("Extracurricular tailored", state.get('extracurricular_tailored', False)),
         ("Cross-reference checked", state.get('cross_reference_checked', False)),
         ("Inconsistencies resolved", state.get('inconsistencies_resolved', False)),
         ("Grammar checked", state.get('grammar_checked', False)),

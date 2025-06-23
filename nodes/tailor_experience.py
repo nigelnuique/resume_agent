@@ -44,9 +44,9 @@ def tailor_experience(state: ResumeState) -> ResumeState:
         """
         
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are an expert resume writer. Tailor experience sections to maximize relevance while maintaining truthfulness."},
+                {"role": "system", "content": "You are an expert resume writer. Tailor experience sections to highlight relevant achievements and skills matching job requirements."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.4
