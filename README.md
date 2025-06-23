@@ -1,10 +1,10 @@
-# Resume Agent 3 - AI-Powered Resume Tailoring System
+# Resume Agent - AI-Powered Resume Tailoring System
 
 An intelligent resume tailoring system that automatically customizes your CV based on job advertisements using LangGraph and OpenAI's GPT-4.
 
 ## Overview
 
-Resume Agent 3 uses a multi-step AI workflow to analyze job advertisements and tailor your resume accordingly, ensuring maximum relevance and impact while maintaining accuracy and professionalism.
+Resume Agent uses a multi-step AI workflow to analyze job advertisements and tailor your resume accordingly, ensuring maximum relevance and impact while maintaining accuracy and professionalism.
 
 ## Features
 
@@ -20,7 +20,7 @@ Resume Agent 3 uses a multi-step AI workflow to analyze job advertisements and t
 ## System Architecture
 
 ```
-Resume Agent 3/
+Resume Agent/
 ├── nodes/                    # Processing nodes
 │   ├── parse_job_ad.py      # Job advertisement analysis
 │   ├── reorder_sections.py  # Section prioritization
@@ -228,7 +228,7 @@ If you want to share your improvements or fork this project:
    ```bash
    git init
    git add .
-   git commit -m "Initial commit - Resume Agent 3"
+   git commit -m "Initial commit - Resume Agent"
    ```
 
 2. **Create a GitHub repository** and push:

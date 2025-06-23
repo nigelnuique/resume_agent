@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Resume Agent 3 - Automated Resume Tailoring System
+Resume Agent - Automated Resume Tailoring System
 Uses LangGraph to orchestrate AI-powered resume tailoring based on job advertisements.
 """
 
@@ -200,7 +200,7 @@ def print_summary(state: ResumeState) -> None:
 
 def main():
     """Main function to run the resume tailoring agent."""
-    print("🚀 Resume Agent 3 - Starting tailoring process...")
+    print("🚀 Resume Agent - Starting tailoring process...")
     print("="*60)
     
     # Load environment variables from .env file
