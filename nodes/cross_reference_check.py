@@ -350,12 +350,43 @@ def fix_ai_sounding_language(working_cv: Dict) -> List[str]:
                             updated_highlight = re.sub(r'\.+', '.', updated_highlight)
                             updated_highlight = re.sub(r'\s+', ' ', updated_highlight).strip()
                     
+                    # Skip empty or single-period bullet points
+                    if updated_highlight.strip() in ['', '.', '..', '...']:
+                        continue
+                    
                     if updated_highlight != original_highlight:
                         changes_made.append(f"Removed AI-sounding language from project: {original_highlight[:50]}...")
                     
                     updated_highlights.append(updated_highlight)
                 
                 project['highlights'] = updated_highlights
+    
+    return changes_made
+
+def clean_empty_bullet_points(working_cv: Dict) -> List[str]:
+    """
+    Remove empty or meaningless bullet points from all sections.
+    """
+    changes_made = []
+    
+    # Check all sections that have highlights
+    for section_name in ['experience', 'projects', 'education']:
+        if section_name in working_cv:
+            for item in working_cv[section_name]:
+                if 'highlights' in item and isinstance(item['highlights'], list):
+                    original_highlights = item['highlights'].copy()
+                    cleaned_highlights = []
+                    
+                    for highlight in original_highlights:
+                        # Skip empty, single period, or meaningless bullet points
+                        if isinstance(highlight, str):
+                            cleaned_highlight = highlight.strip()
+                            if cleaned_highlight and cleaned_highlight not in ['', '.', '..', '...', '-', '•']:
+                                cleaned_highlights.append(highlight)
+                    
+                    if len(cleaned_highlights) != len(original_highlights):
+                        item['highlights'] = cleaned_highlights
+                        changes_made.append(f"Removed {len(original_highlights) - len(cleaned_highlights)} empty bullet points from {section_name}")
     
     return changes_made
 
@@ -409,7 +440,14 @@ def cross_reference_check(state: ResumeState) -> ResumeState:
             all_issues.append("Found AI-sounding language patterns (demonstrating, showcasing)")
             print("   🔧 Fixed AI-sounding language patterns")
         
-        # 6. Try LLM-based analysis (optional)
+        # 6. Clean empty bullet points
+        clean_empty_changes = clean_empty_bullet_points(working_cv)
+        all_changes.extend(clean_empty_changes)
+        if clean_empty_changes:
+            all_issues.append("Found and removed empty bullet points")
+            print("   🔧 Cleaned empty bullet points")
+        
+        # 7. Try LLM-based analysis (optional)
         try:
             client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
             

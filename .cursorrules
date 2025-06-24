@@ -1,0 +1,150 @@
+# Cursor Rules for Resume Agent Project
+
+## Project Overview
+This is a Python-based resume tailoring system that uses AI to customize CVs based on job advertisements. The project uses LangGraph for workflow orchestration and OpenAI APIs for content generation.
+
+## Code Style & Standards
+
+### Python
+- Follow PEP 8 style guidelines
+- Use type hints for all function parameters and return values
+- Use f-strings for string formatting (Python 3.6+)
+- Keep functions focused and under 50 lines when possible
+- Use descriptive variable and function names
+- Add docstrings to all functions and classes
+
+### File Organization
+- Keep related functionality in the same module
+- Use clear, descriptive file names
+- Group imports: standard library, third-party, local imports
+- Separate imports with blank lines
+
+### Error Handling
+- Use specific exception types when possible
+- Provide meaningful error messages
+- Log errors appropriately
+- Use try-except blocks for external API calls
+
+## Project-Specific Guidelines
+
+### State Management
+- The `state.py` file defines the ResumeState type
+- All nodes should accept and return ResumeState
+- Use type hints consistently with ResumeState
+- Validate state structure before processing
+
+### Node Functions
+- All nodes in `nodes/` directory should follow the same pattern:
+  - Accept ResumeState as parameter
+  - Return ResumeState
+  - Include proper error handling
+  - Add progress logging
+  - Validate inputs and outputs
+
+### YAML Handling
+- Use PyYAML for YAML operations
+- Validate YAML structure before processing
+- Handle YAML serialization errors gracefully
+- Maintain RenderCV compatibility
+
+### API Integration
+- Use environment variables for API keys
+- Implement rate limiting for external APIs
+- Add proper error handling for API failures
+- Use async/await when appropriate
+
+### Testing
+- Write unit tests for utility functions
+- Test error conditions and edge cases
+- Mock external API calls in tests
+- Use descriptive test names
+
+## Debugging Guidelines
+
+### Input/Output Preservation
+- **NEVER modify input files** (master_CV.yaml, job_advertisement.txt) when debugging
+- **NEVER modify output files** (working_CV.yaml, rendercv_output/) directly
+- The `working_CV.yaml` file is generated output - only fix the source code that produces it
+- Use debug logging and print statements instead of modifying files
+- If you need to test changes, create temporary test files or use environment variables
+
+### Debugging Best Practices
+- Add debug logging to understand data flow
+- Use print statements to trace execution
+- Validate intermediate states without modifying files
+- Test with different inputs using separate test files
+- Use breakpoints and step-through debugging when possible
+
+## File Structure Conventions
+
+```
+Resume_Agent/
+├── nodes/           # Workflow nodes (LangGraph)
+├── utils/           # Utility functions
+├── markdown/        # Template files
+├── rendercv_output/ # Generated CV files
+├── run.py          # Main entry point
+├── state.py        # State management
+└── requirements.txt # Dependencies
+```
+
+## Common Patterns
+
+### Node Function Template
+```python
+def node_function(state: ResumeState) -> ResumeState:
+    """
+    Brief description of what this node does.
+    
+    Args:
+        state: Current resume state
+        
+    Returns:
+        Updated resume state
+    """
+    print("🔧 Node description...")
+    
+    try:
+        # Node logic here
+        state['some_flag'] = True
+        print("✅ Node completed successfully")
+        
+    except Exception as e:
+        error_msg = f"Error in node_function: {str(e)}"
+        print(f"❌ {error_msg}")
+        state['errors'].append(error_msg)
+    
+    return state
+```
+
+### JSON Response Handling
+```python
+result = safe_json_parse(response.choices[0].message.content, "context")
+if result is None:
+    # Provide fallback behavior
+    result = create_fallback_response("context", default_data)
+```
+
+## Performance Considerations
+- Cache API responses when possible
+- Use efficient data structures
+- Minimize file I/O operations
+- Profile code for bottlenecks
+
+## Security
+- Never commit API keys to version control
+- Use environment variables for sensitive data
+- Validate all user inputs
+- Sanitize data before processing
+
+## Documentation
+- Keep README.md updated
+- Document complex algorithms
+- Add inline comments for non-obvious code
+- Update requirements.txt when adding dependencies
+
+## Git Workflow
+- Use descriptive commit messages
+- Create feature branches for new functionality
+- Test changes before committing
+- Keep commits focused and atomic 
