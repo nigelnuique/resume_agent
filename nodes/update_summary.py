@@ -101,15 +101,13 @@ JOB_REQUIREMENTS = {{
         
         if result is None:
             fallback_data = {
-                'new_summary': current_summary,
-                'changes_made': ["Summary update failed - using original"],
-                'word_count': 0,
-                'sentence_count': 0
+                'tailored_summary': current_summary,
+                'changes_made': "Summary update failed - using original"
             }
             result = create_fallback_response("update_summary", fallback_data)
         
-        new_summary = result.get('new_summary', current_summary)
-        changes_made = result.get('changes_made', [])
+        new_summary = result.get('tailored_summary', current_summary)
+        changes_made = result.get('changes_made', "No specific changes documented")
         llm_word_count = result.get('word_count', 0)
         llm_sentence_count = result.get('sentence_count', 0)
         
@@ -153,8 +151,7 @@ JOB_REQUIREMENTS = {{
         print("✅ Professional summary updated successfully")
         print(f"   📊 Final metrics: {actual_word_count} words, {actual_sentence_count} sentences")
         print("   📝 Changes made:")
-        for change in changes_made:
-            print(f"     - {change}")
+        print(f"     - {changes_made}")
         
         # Show constraint compliance
         if UTILS_AVAILABLE:
