@@ -17,65 +17,64 @@ def tailor_projects(state: ResumeState) -> ResumeState:
         job_requirements = state['job_requirements']
         
         prompt = f"""
-        Select the 4 MOST RELEVANT projects for this job and tailor their content.
+You are optimising the *Projects* section of a MASTER résumé
+to create a *Targeted Résumé* for ONE specific job.
 
-        Current Projects ({len(current_projects)} total):
-        {current_projects}
+### Context
+• The master CV contains the candidate's actual projects
+• The target role is described below – highlight what matters and
+  downplay what doesn't.
 
-        Job Requirements:
-        - Role Focus: {job_requirements.get('role_focus', [])}
-        - Industry: {job_requirements.get('industry_domain', 'General')}
-        - Key Technologies: {job_requirements.get('key_technologies', [])}
-        - Essential Requirements: {job_requirements.get('essential_requirements', [])}
+### Inputs
+CURRENT_PROJECTS = {current_projects}
+JOB_REQUIREMENTS = {{
+  "role_focus": {job_requirements.get('role_focus', [])},
+  "industry_domain": "{job_requirements.get('industry_domain', 'General')}",
+  "key_technologies": {job_requirements.get('key_technologies', [])},
+  "essential_requirements": {job_requirements.get('essential_requirements', [])}
+}}
 
-        Instructions:
-        1. Select ONLY the 4 most relevant projects (or fewer if less than 4 exist)
-        2. Order them by relevance to the target role (most relevant first)
-        3. For each selected project, optimize:
-           - Summary to emphasize relevant outcomes and technologies
-           - Highlights to showcase skills matching job requirements
-           - Use keywords from the job advertisement naturally
-           - Add quantification and impact metrics where possible
-           - Remove irrelevant details
-        4. Keep all factual information accurate
-        5. Maintain project timelines and links
+### What to do
+1. **Project Selection**
+   - Select the most relevant projects (max 4-5)
+   - Prioritize projects that demonstrate skills required for the job
+   - Remove projects that don't align with the role requirements
 
-        CRITICAL TRUTHFULNESS GUIDELINES FOR PROJECTS:
-        - These are likely ACADEMIC or PERSONAL projects, not professional work
-        - DO NOT add claims about "collaborating with Data Scientists" unless explicitly mentioned in original
-        - DO NOT claim "production environments" or "production deployment" for academic projects
-        - DO NOT add "collaborated with stakeholders" for personal/academic projects
-        - Use honest language: "Developed", "Implemented", "Built", "Analyzed" rather than inflated collaboration claims
-        - Focus on technical skills demonstrated and results achieved, not imaginary professional collaboration
-        
-        TECHNOLOGY PRESERVATION RULES:
-        - NEVER add technologies that were not mentioned in the original project description
-        - If original project used only SQL, do NOT add Python, pandas, or other technologies
-        - If original project used specific tools/languages, preserve that exact technology stack
-        - Do not inflate the technology stack to match job requirements if it's not accurate
-        - Example: If original says "using SQL", do NOT change to "using SQL, Python, and pandas"
-        
-        CRITICAL WRITING STYLE GUIDELINES:
-        - Avoid AI-sounding language patterns like "demonstrating...", "showcasing...", "highlighting..."
-        - Let achievements speak for themselves - don't explicitly state what they demonstrate
-        - Use direct, concise language focused on actions and results
-        - Example: Instead of "Built a model, demonstrating ML expertise" → "Achieved 97% accuracy using KNN and Decision Trees"
-        - Example: Instead of "Developed a system, showcasing data processing skills" → "Extracted pathology, radiology, and medication tasks from clinical notes"
+2. **Content Optimization**
+   - Emphasize technologies and skills relevant to the job
+   - Highlight quantifiable results and impact
+   - Focus on problem-solving and technical implementation
+   - Keep descriptions concise and impactful
 
-        CRITICAL: Return ONLY the top 4 most relevant projects, not all projects.
+3. **Technology Accuracy**
+   - Only mention technologies that were actually used in the project
+   - Do NOT add technologies that weren't part of the original project
+   - If original project used only SQL, do NOT add Python, pandas, or other technologies
+   - Example: If original says "using SQL", do NOT change to "using SQL, Python, and pandas"
 
-        Return ONLY a properly formatted JSON object (no additional text) with:
-        - "tailored_projects": list of TOP 4 project entries in relevance order with optimized content
-        - "changes_summary": brief explanation of selection criteria and content changes
-        - "projects_removed": count of how many projects were excluded
-        
-        Example format:
-        {{
-            "tailored_projects": [...],
-            "changes_summary": "Selected 4 most relevant projects and optimized content",
-            "projects_removed": 2
-        }}
-        """
+4. **Project Types**
+   - Technical projects: Emphasize technical skills, algorithms, and problem-solving
+   - Data projects: Emphasize data analysis, visualization, and insights
+   - Web projects: Emphasize full-stack development, user experience, and deployment
+   - Research projects: Emphasize methodology, analysis, and findings
+
+### CRITICAL RULES:
+- Base everything on the candidate's ACTUAL projects
+- Do NOT invent new projects or technologies
+- Maintain factual accuracy about what was actually built
+- Focus on transferable skills and genuine achievements
+- Keep project links and names intact
+
+### Output (MUST be strict JSON):
+{{
+  "tailored_projects": [
+    {{"name": "...", "end_date": "...", "summary": "...", "highlights": ["...", "..."], "link": "..."}},
+    ...
+  ],
+  "projects_removed": ["List of removed projects"],
+  "changes_summary": "Brief description of what was changed and why"
+}}
+"""
         
         response = client.chat.completions.create(
             model="gpt-4",  # Use GPT-4 for better truthfulness
@@ -86,26 +85,21 @@ def tailor_projects(state: ResumeState) -> ResumeState:
             temperature=0.3
         )
         
+        # Parse the response
         result = safe_json_parse(response.choices[0].message.content, "tailor_projects")
         
         if result is None:
-            # Provide fallback behavior - keep original projects but limit to 4
-            original_projects = state['working_cv']['cv']['sections'].get('projects', [])
+            # Provide fallback behavior - keep original projects
             fallback_data = {
-                'tailored_projects': original_projects[:4],  # Just take first 4
-                'changes_summary': 'Limited to first 4 projects due to parsing error',
-                'projects_removed': max(0, len(original_projects) - 4)
+                'tailored_projects': current_projects,
+                'projects_removed': [],
+                'changes_summary': 'No changes made due to parsing error - original projects retained'
             }
             result = create_fallback_response("tailor_projects", fallback_data)
         
-        tailored_projects = result.get('tailored_projects', state['working_cv']['cv']['sections'].get('projects', [])[:4])
+        tailored_projects = result.get('tailored_projects', current_projects)
         changes_summary = result.get('changes_summary', 'No changes summary available')
-        projects_removed = result.get('projects_removed', 0)
-        
-        # Ensure we don't exceed 4 projects
-        if len(tailored_projects) > 4:
-            tailored_projects = tailored_projects[:4]
-            projects_removed += len(tailored_projects) - 4
+        projects_removed = result.get('projects_removed', [])
         
         # Update the projects section
         state['working_cv']['cv']['sections']['projects'] = tailored_projects
@@ -113,8 +107,9 @@ def tailor_projects(state: ResumeState) -> ResumeState:
         
         print("✅ Projects section tailored successfully")
         print(f"   - Projects selected: {len(tailored_projects)}")
-        if projects_removed > 0:
-            print(f"   - Projects removed: {projects_removed}")
+        if projects_removed:
+            print(f"   - Projects removed: {len(projects_removed)}")
+            print(f"   - Removed: {', '.join(projects_removed)}")
         print(f"   - Summary: {changes_summary}")
         
     except Exception as e:

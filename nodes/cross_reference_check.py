@@ -74,7 +74,7 @@ def remove_unsupported_skills(working_cv: Dict) -> List[str]:
 
 def fix_experience_hallucinations(working_cv: Dict) -> List[str]:
     """
-    Fix hallucinated claims in experience section, especially for hardware testing roles.
+    Fix hallucinated claims in experience section, especially for roles that don't match the job description.
     """
     changes_made = []
     
@@ -82,136 +82,95 @@ def fix_experience_hallucinations(working_cv: Dict) -> List[str]:
         return changes_made
     
     for exp in working_cv['experience']:
-        if 'position' in exp and 'test development engineer' in exp['position'].lower():
-            # This is a hardware testing role - remove software development claims
-            if 'highlights' in exp:
-                updated_highlights = []
-                
-                for highlight in exp['highlights']:
-                    highlight_lower = highlight.lower()
-                    original_highlight = highlight
-                    
-                    # Check for software development claims that don't belong in hardware testing
-                    problematic_phrases = [
-                        'leveraging sql', 'utilizing sql', 'using sql',
-                        'data querying', 'data transformation', 'data optimisation', 'data optimization',
-                        'data pipeline', 'data engineering', 'data analytics',
-                        'machine learning initiatives', 'analytics engineering',
-                        'python', 'ci/cd', 'git', 'mlops'
-                    ]
-                    
-                    has_problematic_content = any(phrase in highlight_lower for phrase in problematic_phrases)
-                    
-                    if has_problematic_content:
-                        # Remove the problematic phrases and clean up the sentence
-                        updated_highlight = highlight
-                        
-                        # Remove specific problematic phrases
-                        updated_highlight = re.sub(r',\s*leveraging\s+sql[^,]*', '', updated_highlight, flags=re.IGNORECASE)
-                        updated_highlight = re.sub(r',\s*utilizing\s+sql[^,]*', '', updated_highlight, flags=re.IGNORECASE)
-                        updated_highlight = re.sub(r',\s*using\s+sql[^,]*', '', updated_highlight, flags=re.IGNORECASE)
-                        updated_highlight = re.sub(r',\s*demonstrating\s+strong\s+proficiency\s+in\s+data\s+engineering[^,]*', '', updated_highlight, flags=re.IGNORECASE)
-                        updated_highlight = re.sub(r',\s*bridging\s+the\s+gap\s+between[^,]*machine\s+learning\s+initiatives[^,]*', '', updated_highlight, flags=re.IGNORECASE)
-                        updated_highlight = re.sub(r',\s*emphasising\s+on\s+data[^,]*', '', updated_highlight, flags=re.IGNORECASE)
-                        updated_highlight = re.sub(r',\s*utilising\s+data\s+analytics[^,]*', '', updated_highlight, flags=re.IGNORECASE)
-                        updated_highlight = re.sub(r',\s*utilising\s+data\s+engineering[^,]*', '', updated_highlight, flags=re.IGNORECASE)
-                        updated_highlight = re.sub(r',\s*leveraging\s+data\s+analytics[^,]*', '', updated_highlight, flags=re.IGNORECASE)
-                        
-                        # Clean up any remaining artifacts
-                        updated_highlight = re.sub(r'\s+', ' ', updated_highlight)  # Multiple spaces
-                        updated_highlight = updated_highlight.strip()
-                        
-                        # If the highlight is significantly different, log the change
-                        if updated_highlight != original_highlight:
-                            updated_highlights.append(updated_highlight)
-                            changes_made.append(f"Fixed software claim in hardware role: {original_highlight[:50]}...")
-                        else:
-                            updated_highlights.append(highlight)
-                    else:
-                        updated_highlights.append(highlight)
-                
-                exp['highlights'] = updated_highlights
+        if 'highlights' not in exp:
+            continue
         
-        # Also check Associate Member of Technical Staff role
-        elif 'position' in exp and 'associate member of technical staff' in exp['position'].lower() and 'test systems' in exp['position'].lower():
-            if 'highlights' in exp:
-                updated_highlights = []
-                
-                for highlight in exp['highlights']:
-                    highlight_lower = highlight.lower()
-                    original_highlight = highlight
-                    
-                    # Remove MLOps and data model claims from hardware testing
-                    problematic_phrases = [
-                        'emphasising on data-focused', 'utilising data analytics',
-                        'data models', 'mlops', 'machine learning'
-                    ]
-                    
-                    has_problematic_content = any(phrase in highlight_lower for phrase in problematic_phrases)
-                    
-                    if has_problematic_content:
-                        updated_highlight = highlight
-                        updated_highlight = re.sub(r',\s*emphasising\s+on\s+data-focused[^,]*', '', updated_highlight, flags=re.IGNORECASE)
-                        updated_highlight = re.sub(r',\s*utilising\s+data\s+analytics[^,]*', '', updated_highlight, flags=re.IGNORECASE)
-                        updated_highlight = updated_highlight.replace('integrating MLOps tooling', 'for production testing')
-                        updated_highlight = updated_highlight.replace('data models', 'test procedures')
-                        
-                        # Clean up
-                        updated_highlight = re.sub(r'\s+', ' ', updated_highlight)
-                        updated_highlight = updated_highlight.strip()
-                        
-                        if updated_highlight != original_highlight:
-                            updated_highlights.append(updated_highlight)
-                            changes_made.append(f"Fixed software claim in hardware role: {original_highlight[:50]}...")
-                        else:
-                            updated_highlights.append(highlight)
-                    else:
-                        updated_highlights.append(highlight)
-                
-                exp['highlights'] = updated_highlights
+        # Check for hardware/testing roles that shouldn't have software development claims
+        position_lower = exp.get('position', '').lower()
+        company_lower = exp.get('company', '').lower()
         
-        # Check for other irrelevant roles that got inappropriate data engineering content
-        elif 'position' in exp:
-            position_lower = exp['position'].lower()
-            irrelevant_positions = ['personal shopper', 'event staff', 'property audit']
+        # Generic check for hardware/testing roles
+        is_hardware_role = any(term in position_lower for term in [
+            'test', 'hardware', 'electronics', 'manufacturing', 'quality', 'production'
+        ])
+        
+        # Generic check for service/retail roles
+        is_service_role = any(term in position_lower for term in [
+            'shopper', 'staff', 'assistant', 'support', 'service', 'retail'
+        ])
+        
+        updated_highlights = []
+        
+        for highlight in exp['highlights']:
+            original_highlight = highlight
+            updated_highlight = highlight
             
-            if any(pos in position_lower for pos in irrelevant_positions):
-                if 'highlights' in exp:
-                    updated_highlights = []
+            # Remove software development claims from hardware roles
+            if is_hardware_role:
+                # Check for software development claims that don't belong in hardware roles
+                software_patterns = [
+                    r'developed.*software',
+                    r'built.*application',
+                    r'created.*web.*app',
+                    r'programmed.*system',
+                    r'coded.*solution',
+                    r'developed.*api',
+                    r'built.*database',
+                    r'created.*dashboard'
+                ]
+                
+                for pattern in software_patterns:
+                    if re.search(pattern, updated_highlight, re.IGNORECASE):
+                        # Remove or modify the claim to be more hardware-focused
+                        updated_highlight = re.sub(pattern, 'developed hardware solutions', updated_highlight, flags=re.IGNORECASE)
+                
+                # Remove MLOps and data model claims from hardware roles
+                ml_patterns = [
+                    r'mlops',
+                    r'machine learning model',
+                    r'data model',
+                    r'ml pipeline',
+                    r'data pipeline'
+                ]
+                
+                for pattern in ml_patterns:
+                    if re.search(pattern, updated_highlight, re.IGNORECASE):
+                        updated_highlight = re.sub(pattern, 'technical solutions', updated_highlight, flags=re.IGNORECASE)
+            
+            # Remove technical claims from service roles
+            elif is_service_role:
+                # Check for inappropriate technical claims in service roles
+                technical_patterns = [
+                    r'leveraging.*data.*analytics',
+                    r'utilising.*data.*analytics', 
+                    r'utilising.*data.*engineering',
+                    r'demonstrating.*strong.*skills'
+                ]
+                
+                has_problematic_content = any(
+                    re.search(pattern, updated_highlight, re.IGNORECASE) 
+                    for pattern in technical_patterns
+                )
+                
+                if has_problematic_content:
+                    updated_highlight = highlight
+                    updated_highlight = re.sub(r',\s*leveraging\s+data\s+analytics[^,]*', '', updated_highlight, flags=re.IGNORECASE)
+                    updated_highlight = re.sub(r',\s*utilising\s+data\s+analytics[^,]*', '', updated_highlight, flags=re.IGNORECASE)
+                    updated_highlight = re.sub(r',\s*utilising\s+data\s+engineering[^,]*', '', updated_highlight, flags=re.IGNORECASE)
+                    updated_highlight = re.sub(r',\s*demonstrating\s+strong[^,]*skills[^,]*', '', updated_highlight, flags=re.IGNORECASE)
                     
-                    for highlight in exp['highlights']:
-                        highlight_lower = highlight.lower()
-                        original_highlight = highlight
-                        
-                        # Remove inappropriate data engineering content from service roles
-                        problematic_phrases = [
-                            'leveraging data analytics', 'utilising data analytics',
-                            'utilising data engineering', 'data optimisation',
-                            'data engineering for', 'demonstrating strong'
-                        ]
-                        
-                        has_problematic_content = any(phrase in highlight_lower for phrase in problematic_phrases)
-                        
-                        if has_problematic_content:
-                            updated_highlight = highlight
-                            updated_highlight = re.sub(r',\s*leveraging\s+data\s+analytics[^,]*', '', updated_highlight, flags=re.IGNORECASE)
-                            updated_highlight = re.sub(r',\s*utilising\s+data\s+analytics[^,]*', '', updated_highlight, flags=re.IGNORECASE)
-                            updated_highlight = re.sub(r',\s*utilising\s+data\s+engineering[^,]*', '', updated_highlight, flags=re.IGNORECASE)
-                            updated_highlight = re.sub(r',\s*demonstrating\s+strong[^,]*skills[^,]*', '', updated_highlight, flags=re.IGNORECASE)
-                            
-                            # Clean up
-                            updated_highlight = re.sub(r'\s+', ' ', updated_highlight)
-                            updated_highlight = updated_highlight.strip()
-                            
-                            if updated_highlight != original_highlight:
-                                updated_highlights.append(updated_highlight)
-                                changes_made.append(f"Removed inappropriate data claims from service role: {original_highlight[:50]}...")
-                            else:
-                                updated_highlights.append(highlight)
-                        else:
-                            updated_highlights.append(highlight)
-                    
-                    exp['highlights'] = updated_highlights
+                    # Clean up
+                    updated_highlight = re.sub(r'\s+', ' ', updated_highlight)
+                    updated_highlight = updated_highlight.strip()
+            
+            # If the highlight is significantly different, log the change
+            if updated_highlight != original_highlight:
+                updated_highlights.append(updated_highlight)
+                changes_made.append(f"Fixed inappropriate claims in {exp.get('position', 'role')}: {original_highlight[:50]}...")
+            else:
+                updated_highlights.append(highlight)
+        
+        exp['highlights'] = updated_highlights
     
     return changes_made
 

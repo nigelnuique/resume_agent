@@ -21,63 +21,63 @@ def tailor_education(state: ResumeState) -> ResumeState:
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         job_requirements = state['job_requirements']
         
-        prompt = """
-        Optimize the education section for this job application by consolidating coursework and highlighting relevant achievements.
+        prompt = f"""
+You are optimising the *Education* section of a MASTER résumé
+to create a *Targeted Résumé* for ONE specific job.
 
-        Current Education:
-        """ + str(current_education) + """
+### Context
+• The master CV contains the candidate's actual education history
+• The target role is described below – highlight what matters and
+  downplay what doesn't.
 
-        Job Requirements:
-        - Essential Requirements: """ + str(job_requirements.get('essential_requirements', [])) + """
-        - Key Technologies: """ + str(job_requirements.get('key_technologies', [])) + """
-        - Role Focus: """ + str(job_requirements.get('role_focus', [])) + """
-        - Industry: """ + str(job_requirements.get('industry_domain', 'General')) + """
+### Inputs
+CURRENT_EDUCATION = {current_education}
+JOB_REQUIREMENTS = {{
+  "role_focus": {job_requirements.get('role_focus', [])},
+  "industry_domain": "{job_requirements.get('industry_domain', 'General')}",
+  "key_technologies": {job_requirements.get('key_technologies', [])},
+  "essential_requirements": {job_requirements.get('essential_requirements', [])}
+}}
 
-        Instructions:
-        1. Keep all institutions, degrees, dates, and locations exactly as they are
-        2. For each education entry, optimize the highlights:
-           - If there's a "Relevant Coursework:" highlight, consolidate it into ONE line with 0-5 most relevant courses
-           - Select courses that align with job requirements and key technologies
-           - Keep other achievements (GPA, scholarships, thesis, capstone) as separate highlights
-           - Order highlights by importance (achievements first, then coursework)
-        3. Format coursework as: "Relevant coursework: Course 1, Course 2, Course 3, Course 4"
-        4. If no courses are relevant to the target role, omit the coursework highlight entirely
+### What to do
+1. **Coursework Selection**
+   - Select the most relevant coursework (max 5 courses per institution)
+   - Prioritize courses that align with job requirements
+   - Remove irrelevant courses that don't add value
 
-        CRITICAL PRESERVATION RULES:
-        - Keep coursework as a highlight bullet point, NOT as a separate field
-        - NEVER truncate existing descriptions with "..." - preserve full text of capstone projects, thesis descriptions, etc.
-        - If a capstone or thesis description exists, keep the COMPLETE original text
-        - Only modify coursework lists, not project/thesis descriptions
+2. **Content Optimization**
+   - Keep all factual information (institution, degree, dates, GPA, etc.)
+   - Optimize coursework highlights to emphasize relevant skills
+   - Maintain academic achievements and honors
+   - Keep thesis/capstone project descriptions intact
 
-        Return a JSON object with:
-        - "education_entries": list of optimized education entries with updated highlights
-        - "changes_summary": brief explanation of changes made
+3. **Relevance Guidelines**
+   - Technical roles: Emphasize technical coursework, programming, algorithms
+   - Business roles: Emphasize business, management, and analytical courses
+   - Creative roles: Emphasize design, communication, and creative courses
+   - Research roles: Emphasize research methodology, analysis, and specialized courses
 
-        Example format:
-        {{
-            "education_entries": [
-                {{
-                    "institution": "RMIT University",
-                    "degree": "MS",
-                    "area": "Data Science",
-                    "start_date": "2023-02",
-                    "end_date": "2024-12",
-                    "location": "Melbourne, Australia",
-                    "highlights": [
-                        "Academic merit scholarship",
-                        "GPA: 3.5/4.0 (Distinction)",
-                        "Capstone Project: [PRESERVE FULL ORIGINAL TEXT]",
-                        "Relevant coursework: Machine Learning, Data Science with Python, Big Data Processing, Cloud Computing"
-                    ]
-                }}
-            ]
-        }}
-        """
+### CRITICAL RULES:
+- Base everything on the candidate's ACTUAL education
+- Do NOT invent courses or institutions
+- Maintain factual accuracy about degrees, dates, and achievements
+- Keep all academic honors, GPA, and scholarships
+- Preserve thesis and capstone project descriptions
+
+### Output (MUST be strict JSON):
+{{
+  "tailored_education": [
+    {{"institution": "...", "area": "...", "degree": "...", "start_date": "...", "end_date": "...", "location": "...", "highlights": ["...", "..."]}},
+    ...
+  ],
+  "changes_summary": "Brief description of what was changed and why"
+}}
+"""
         
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are an expert resume writer. Keep coursework as highlight bullet points, NOT separate fields. NEVER truncate existing descriptions - preserve full text of capstone projects and thesis descriptions exactly as they are."},
+                {"role": "system", "content": "You are an expert resume writer. Keep coursework as highlight bullet points, NOT separate fields. NEVER truncate existing descriptions - preserve full text of capstone projects and thesis descriptions exactly as they are. Only include relevant coursework if there are actually relevant courses (0-5 max). If no courses are relevant, omit the coursework highlight entirely."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.2
@@ -90,7 +90,7 @@ def tailor_education(state: ResumeState) -> ResumeState:
             state['education_tailored'] = True
             return state
         
-        education_entries = result.get('education_entries', current_education)
+        education_entries = result.get('tailored_education', current_education)
         changes_summary = result.get('changes_summary', 'No changes summary available')
         
         # Update the education section

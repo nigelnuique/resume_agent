@@ -30,68 +30,49 @@ def update_summary(state: ResumeState) -> ResumeState:
         job_requirements = state['job_requirements']
         
         prompt = f"""
-You are updating the *Professional Summary* section of a MASTER résumé
-to create a *Targeted Résumé* for ONE specific job.
+        Rewrite the professional summary to align with this job advertisement while staying truthful to the candidate's background.
 
-### Context
-• The master CV covers the candidate's actual background and experience
-• The target role is described below – highlight what matters and
-  downplay what doesn't.
+        CRITICAL CONSTRAINTS:
+        - MAXIMUM 2-4 sentences total
+        - TOTAL word count: 40-70 words
+        - Be concise and impactful - every word must add value
+        - Focus on the most relevant skills and experience for this specific role
 
-### Inputs
-CURRENT_SUMMARY = {current_summary}
-JOB_REQUIREMENTS = {{
-  "role_focus": {job_requirements.get('role_focus', [])},
-  "industry_domain": "{job_requirements.get('industry_domain', 'General')}",
-  "key_technologies": {job_requirements.get('key_technologies', [])},
-  "essential_requirements": {job_requirements.get('essential_requirements', [])}
-}}
+        Current Summary:
+        {current_summary}
 
-### What to do
-1. **Analyze the candidate's actual background**
-   - Review their real professional experience and education
-   - Identify their genuine strengths and relevant skills
-   - Understand their career progression and transitions
+        Job Requirements Analysis:
+        - Role Focus: {job_requirements.get('role_focus', [])}
+        - Industry: {job_requirements.get('industry_domain', 'General')}
+        - Key Technologies: {job_requirements.get('key_technologies', [])}
+        - Essential Requirements: {job_requirements.get('essential_requirements', [])}
+        - Experience Level: {job_requirements.get('experience_level', 'Not specified')}
 
-2. **Match to job requirements**
-   - Highlight experience that directly relates to the role
-   - Emphasize transferable skills that apply to the position
-   - Connect their background to the job's needs
+        Return ONLY a properly formatted JSON object with:
+        - "new_summary": list of strings (each string is a sentence)
+        - "changes_made": list of specific changes made
+        - "word_count": estimated word count
+        - "sentence_count": number of sentences
 
-3. **Be honest about experience level**
-   - If main professional experience is in different field, be honest about this
-   - Distinguish between professional experience and academic/project experience
-   - Don't inflate experience in areas where they have limited professional background
-   - Example: If someone has 3 years in one field + MS in another field, say "Professional transitioning to [new field]" NOT "3+ years in [new field]"
-
-4. **Structure the summary**
-   - 50-60 words, 2-3 sentences
-   - Lead with most relevant experience
-   - Include key skills that match job requirements
-   - End with enthusiasm for the role
-
-### CRITICAL RULES:
-- Base everything on the candidate's ACTUAL experience in the master CV
-- Do NOT invent or inflate experience they don't have
-- Be honest about their background and transitions
-- Focus on transferable skills and genuine qualifications
-- Match the tone to the job requirements and company culture
-
-### Output (MUST be strict JSON):
-{{
-  "tailored_summary": [
-    "First sentence about their background and relevant experience",
-    "Second sentence about their skills and qualifications",
-    "Third sentence expressing enthusiasm for the role"
-  ],
-  "changes_made": "Brief description of what was changed and why"
-}}
-"""
+        Focus on:
+        1. Quantifiable achievements relevant to the role
+        2. Key technologies mentioned in job requirements
+        3. Experience level and domain expertise
+        4. Value proposition for this specific role
+        
+        Example format:
+        {{
+            "new_summary": ["Sentence 1.", "Sentence 2.", "Sentence 3."],
+            "changes_made": ["Focused on data engineering skills", "Added relevant technologies"],
+            "word_count": 45,
+            "sentence_count": 3
+        }}
+        """
         
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are an expert resume writer who prioritizes TRUTHFULNESS above all else. You must carefully analyze the candidate's actual work history and never claim professional experience in domains where they only have academic/project experience. Be honest about career transitions and distinguish clearly between professional work experience vs academic background."},
+                {"role": "system", "content": "You are an expert resume writer. Create concise, impactful professional summaries that strictly adhere to word and sentence limits."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3

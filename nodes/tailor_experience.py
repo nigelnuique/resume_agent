@@ -40,47 +40,65 @@ def tailor_experience(state: ResumeState) -> ResumeState:
         """
         
         prompt = f"""
-        Tailor the experience section for this job application by reordering experiences and optimizing content.
+You are optimising the *Experience* section of a MASTER résumé
+to create a *Targeted Résumé* for ONE specific job.
 
-        Current Experience:
-        {current_experience}
+### Context
+• The master CV covers the candidate's actual work experience
+• The target role is described below – highlight what matters and
+  downplay what doesn't.
 
-        Job Requirements:
-        - Essential Requirements: {job_requirements.get('essential_requirements', [])}
-        - Key Technologies: {job_requirements.get('key_technologies', [])}
-        - Role Focus: {job_requirements.get('role_focus', [])}
-        - Industry: {job_requirements.get('industry_domain', 'General')}
-        - Experience Level: {job_requirements.get('experience_level', 'Not specified')}
+### Inputs
+CURRENT_EXPERIENCE = {current_experience}
+JOB_REQUIREMENTS = {{
+  "role_focus": {job_requirements.get('role_focus', [])},
+  "industry_domain": "{job_requirements.get('industry_domain', 'General')}",
+  "key_technologies": {job_requirements.get('key_technologies', [])},
+  "essential_requirements": {job_requirements.get('essential_requirements', [])}
+}}
 
-        {filter_instruction}
+### What to do
+1. **Relevance Assessment**
+   - *Keep*: Roles directly related to the job requirements
+   - *Modify*: Roles with transferable skills that can be emphasized
+   - *Remove*: Clearly irrelevant roles that don't add value
 
-        CRITICAL INSTRUCTIONS:
-        1. Reorder experiences to put most relevant ones first
-        2. For each experience, optimize highlights to emphasize relevant skills and achievements
-        3. Use keywords from job requirements naturally BUT ONLY if they are genuinely relevant to the role
-        4. Quantify achievements where possible
-        5. Focus on impact and results
-        6. Keep all factual information accurate (companies, positions, dates, locations)
-        
-        CRITICAL WRITING STYLE GUIDELINES:
-        - Avoid AI-sounding language patterns like "demonstrating...", "showcasing...", "highlighting..."
-        - Let achievements speak for themselves - don't explicitly state what they demonstrate
-        - Use direct, concise language focused on actions and results
-        - Example: Instead of "Led 10 projects, demonstrating leadership skills" → "Led 10 projects, releasing 40 setups"
-        - Example: Instead of "Developed solutions, showcasing technical expertise" → "Developed test solutions for 4 new IC products"
-        
-        IMPORTANT CONSTRAINTS:
-        - DO NOT ADD data engineering, SQL, Python, or machine learning content to hardware testing roles (Test Development Engineer, Test Systems Development)
-        - DO NOT ADD technical data skills to service roles (Personal Shopper, Event Staff, Property Audit)
-        - Only mention technologies and skills that were genuinely used in each specific role
-        - Hardware testing roles should focus on IC testing, test development, hardware, qualifications, and production support
-        - Service roles should focus on customer service, coordination, problem-solving, and operational efficiency
-        
-        Return a JSON object with:
-        - "experiences": list of reordered and optimized experience entries (filtered if appropriate)
-        - "changes_summary": brief explanation of changes made, including any positions removed
-        - "positions_removed": number of positions removed (if any)
-        """
+2. **Content Optimization**
+   - Emphasize achievements and skills relevant to the target role
+   - Highlight transferable skills (leadership, problem-solving, etc.)
+   - Quantify results where possible
+   - Focus on impact and outcomes
+
+3. **Role-Specific Guidelines**
+   - For technical roles: Emphasize technical skills, projects, and problem-solving
+   - For management roles: Emphasize leadership, team management, and strategic thinking
+   - For service roles: Emphasize customer service, communication, and problem resolution
+   - For creative roles: Emphasize creativity, innovation, and project outcomes
+
+4. **Content Restrictions**
+   - DO NOT ADD technical skills to non-technical roles unless they were actually used
+   - DO NOT ADD data engineering, SQL, Python, or machine learning content to hardware/testing roles
+   - DO NOT ADD software development claims to service/retail roles
+   - Hardware/testing roles should focus on testing, quality assurance, and production support
+   - Service roles should focus on customer service, communication, and operational tasks
+
+### CRITICAL RULES:
+- Base everything on the candidate's ACTUAL experience
+- Do NOT invent or inflate responsibilities
+- Be honest about the nature of each role
+- Focus on transferable skills and genuine achievements
+- Maintain chronological order unless reordering improves relevance
+
+### Output (MUST be strict JSON):
+{{
+  "tailored_experience": [
+    {{"company": "...", "position": "...", "start_date": "...", "end_date": "...", "location": "...", "highlights": ["...", "..."]}},
+    ...
+  ],
+  "removed_positions": ["List of removed positions"],
+  "changes_summary": "Brief description of what was changed and why"
+}}
+"""
         
         response = client.chat.completions.create(
             model="gpt-4",
@@ -98,17 +116,17 @@ def tailor_experience(state: ResumeState) -> ResumeState:
             state['experience_tailored'] = True
             return state
         
-        experiences = result.get('experiences', current_experience)
+        experiences = result.get('tailored_experience', current_experience)
         changes_summary = result.get('changes_summary', 'No changes summary available')
-        positions_removed = result.get('positions_removed', 0)
+        positions_removed = result.get('removed_positions', [])
         
         # Update the experience section
         state['working_cv']['cv']['sections']['experience'] = experiences
         state['experience_tailored'] = True
         
         print("✅ Experience section tailored successfully")
-        if positions_removed > 0:
-            print(f"   🗑️ Removed {positions_removed} irrelevant position(s)")
+        if positions_removed:
+            print(f"   🗑️ Removed positions: {', '.join(positions_removed)}")
         print(f"   📊 Final experience count: {len(experiences)}")
         print(f"   Summary: {changes_summary}")
         
