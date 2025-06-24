@@ -80,9 +80,7 @@ JOB_REQUIREMENTS = {{
 ### Output (MUST be strict JSON):
 {{
   "tailored_summary": [
-    "First sentence about their background and relevant experience",
-    "Second sentence about their skills and qualifications",
-    "Third sentence expressing enthusiasm for the role"
+    "A single paragraph (50-60 words) that flows naturally from the candidate's background to their relevant skills and enthusiasm for the role. This should be written as one continuous paragraph that will be displayed as a single block of text."
   ],
   "changes_made": "Brief description of what was changed and why"
 }}
