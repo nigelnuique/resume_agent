@@ -46,14 +46,14 @@ Resume Agent/
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/Resume_Agent3.git
-   cd Resume_Agent3
+   git clone https://github.com/yourusername/Resume_Agent.git
+   cd Resume_Agent
    ```
    
    **Or create a new project directory**:
    ```bash
-   mkdir Resume_Agent3
-   cd Resume_Agent3
+   mkdir Resume_Agent
+   cd Resume_Agent
    ```
 
 2. **Install dependencies**:
@@ -234,7 +234,7 @@ If you want to share your improvements or fork this project:
 2. **Create a GitHub repository** and push:
    ```bash
    # Create repository on GitHub first, then:
-   git remote add origin https://github.com/yourusername/Resume_Agent3.git
+   git remote add origin https://github.com/yourusername/Resume_Agent.git
    git branch -M main
    git push -u origin main
    ```
