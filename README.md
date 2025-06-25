@@ -188,12 +188,13 @@ python -u run.py 2>&1 | tee tailoring.log
 
 ### Dependencies
 - **LangGraph**: Workflow orchestration and state management
-- **OpenAI**: GPT-4 for intelligent content generation
+- **OpenAI**: GPT-4 for most nodes; `parse_job_ad` uses GPT-3.5-turbo
 - **RenderCV**: Professional resume rendering
 - **PyYAML**: YAML file processing
 
 ### AI Model Usage
-- **GPT-4**: Used for all content analysis and generation tasks
+- **GPT-4**: Default model for resume tailoring and optimization
+- **GPT-3.5-turbo**: Used by `parse_job_ad` for job ad analysis
 - **Temperature Settings**: Optimized for consistent, professional output
 - **Token Management**: Efficient prompting to minimize API costs
 
