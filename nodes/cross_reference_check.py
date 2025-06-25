@@ -186,6 +186,7 @@ def fix_project_inflated_claims(working_cv: Dict) -> List[str]:
     for project in working_cv['projects']:
         if 'highlights' in project:
             updated_highlights = []
+            project_changed = False
             
             for highlight in project['highlights']:
                 original_highlight = highlight
@@ -226,13 +227,14 @@ def fix_project_inflated_claims(working_cv: Dict) -> List[str]:
                                 flags=re.IGNORECASE
                             )
                         
+                        project_changed = True
                         changes_made.append(f"Fixed inflated project claim: {original_highlight[:50]}...")
                         break
                 
                 updated_highlights.append(updated_highlight)
             
-            if any(changes_made):
-                                project['highlights'] = updated_highlights
+            if project_changed:
+                project['highlights'] = updated_highlights
     
     return changes_made
 
