@@ -66,11 +66,13 @@ def validate_date_range(start_date: str, end_date: str, entry_name: str = "") ->
         errors.append(f"Invalid start date format: {start_date}")
         return errors
     
-    # Check if start date is in the future
-    if start_dt > datetime.now():
-        # Allow future dates but warn if more than 6 months ahead
-        if start_dt > datetime.now() + relativedelta(months=6) if DATEUTIL_AVAILABLE else start_dt > datetime.now():
-            errors.append(f"Start date {start_date} is too far in the future for {entry_name}")
+    # Check if the start date is too far in the future
+    future_limit = datetime.now()
+    if DATEUTIL_AVAILABLE:
+        future_limit = future_limit + relativedelta(months=6)
+
+    if start_dt > future_limit:
+        errors.append(f"Start date {start_date} is too far in the future for {entry_name}")
     
     # Check if end date is before start date
     if end_dt and start_dt > end_dt:
