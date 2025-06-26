@@ -8,7 +8,6 @@ Modules:
 - text_utils: Lightweight text analysis and validation
 - date_validator: Date parsing, validation, and consistency checking
 - cross_reference_validator: Structured logic for CV section consistency
-- section_optimizer: Rule-based section ordering and optimization
 """
 
 __version__ = "1.0.0"
@@ -18,7 +17,6 @@ try:
     from .text_utils import count_words_sentences, validate_summary_constraints, get_text_statistics
     from .date_validator import validate_experience_dates, validate_education_dates, calculate_total_experience
     from .cross_reference_validator import generate_consistency_report, suggest_improvements
-    from .section_optimizer import optimize_section_structure, validate_section_optimization
     
     __all__ = [
         'count_words_sentences',
@@ -28,9 +26,7 @@ try:
         'validate_education_dates',
         'calculate_total_experience',
         'generate_consistency_report',
-        'suggest_improvements',
-        'optimize_section_structure',
-        'validate_section_optimization'
+        'suggest_improvements'
     ]
     
 except ImportError as e:

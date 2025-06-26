@@ -4,7 +4,6 @@ Provides simple, fast text analysis without external dependencies.
 """
 
 from typing import Dict, Any, List
-import re
 
 def count_words_sentences(text: str) -> Dict[str, int]:
     """
@@ -16,8 +15,9 @@ def count_words_sentences(text: str) -> Dict[str, int]:
     # Count words (split by whitespace, filter empty strings)
     words = len([word for word in text.split() if word.strip()])
     
-    # Count sentences (split by sentence-ending punctuation)
-    sentences = len([s for s in re.split(r'[.!?]+', text) if s.strip()])
+    # Count sentences using basic punctuation checks without regex
+    cleaned = text.replace('?', '.').replace('!', '.')
+    sentences = len([s for s in cleaned.split('.') if s.strip()])
     
     return {'words': words, 'sentences': sentences}
 
