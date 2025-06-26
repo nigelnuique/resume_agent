@@ -1,83 +1,51 @@
-"""
-Rule-based section ordering and optimization.
-Provides cost-effective alternative to LLM-based section reordering.
-"""
+"""AI-based section ordering using OpenAI."""
 
 import os
-from typing import Dict, Any, List
+from openai import OpenAI
 from state import ResumeState
+from .json_utils import safe_json_parse
 
-# Import library-based utilities
-try:
-    from utils.section_optimizer import optimize_section_structure, validate_section_optimization
-    UTILS_AVAILABLE = True
-except ImportError:
-    UTILS_AVAILABLE = False
-    print("⚠️ Section optimization utilities not available")
 
 def reorder_sections(state: ResumeState) -> ResumeState:
-    """
-    Reorder and optimize CV sections using rule-based logic.
-    """
-    print("📋 Optimizing CV section structure using rule-based logic...")
-    
-    if not UTILS_AVAILABLE:
-        print("   ⚠️ Rule-based optimization not available, skipping...")
-        state['sections_reordered'] = True
-        return state
-    
+    """Reorder CV sections with help from GPT-4."""
+    print("📋 Reordering CV sections using AI...")
+
     try:
-        working_cv = state['working_cv']['cv']
-        current_sections = working_cv.get('sections', {})
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        current_sections = state['working_cv']['cv'].get('sections', {})
         job_requirements = state.get('job_requirements', {})
-        
-        # Optimize section structure
-        optimization_result = optimize_section_structure(current_sections, job_requirements)
-        
-        # Validate optimization
-        warnings = validate_section_optimization(current_sections, optimization_result['optimized_sections'])
-        
-        # Apply optimization
-        working_cv['sections'] = optimization_result['optimized_sections']
-        
-        # Update state
-        state['working_cv']['cv'] = working_cv
+
+        prompt = f"""
+Reorder and refine the resume sections below so they best match the job requirements.
+Return strict JSON with keys:\n- optimized_sections: the reordered sections\n- reasoning: short explanation for each section decision.
+
+Resume sections: {list(current_sections.keys())}
+Job requirements: {job_requirements}
+"""
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are an expert resume editor."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.3,
+        )
+
+        result = safe_json_parse(response.choices[0].message.content, "reorder_sections")
+        if result:
+            optimized = result.get('optimized_sections', current_sections)
+            state['working_cv']['cv']['sections'] = optimized
+            reasoning = result.get('reasoning', {})
+            if reasoning:
+                print("   📝 Reasoning:")
+                for sec, reason in reasoning.items():
+                    print(f"     - {sec}: {reason}")
         state['sections_reordered'] = True
-        
-        # Report results
-        kept_sections = optimization_result['kept_sections']
-        removed_sections = optimization_result['removed_sections']
-        reasoning = optimization_result['reasoning']
-        
-        print("✅ Section optimization completed")
-        print(f"   📊 Sections kept: {' → '.join(kept_sections)}")
-        
-        if removed_sections:
-            print(f"   🗑️ Sections removed: {', '.join(removed_sections)}")
-        
-        # Show reasoning for key decisions
-        print("   📝 Reasoning:")
-        for section, reason in reasoning.items():
-            if section in kept_sections:
-                print(f"     ✅ {section}: {reason}")
-            elif section in removed_sections:
-                print(f"     ❌ {section}: {reason}")
-        
-        # Show any warnings
-        if warnings:
-            print("   ⚠️ Optimization warnings:")
-            for warning in warnings:
-                print(f"     - {warning}")
-        
-        # Summary statistics
-        original_count = len([s for s in current_sections.values() if s])
-        optimized_count = len([s for s in optimization_result['optimized_sections'].values() if s])
-        print(f"   📈 Section count: {original_count} → {optimized_count}")
-        
+        print("✅ Section reordering completed")
         return state
-        
+
     except Exception as e:
-        print(f"❌ Section optimization failed: {str(e)}")
-        print("   Continuing with original section order...")
+        print(f"❌ Section reordering failed: {e}")
+        state['errors'].append(str(e))
         state['sections_reordered'] = True
         return state
