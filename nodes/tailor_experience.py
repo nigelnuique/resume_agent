@@ -4,6 +4,13 @@ from openai import OpenAI
 from state import ResumeState
 from .json_utils import safe_json_parse, create_fallback_response
 
+# Import utility for Australian English instruction
+try:
+    from utils import get_australian_english_instruction
+    UTILS_AVAILABLE = True
+except ImportError:
+    UTILS_AVAILABLE = False
+
 def tailor_experience(state: ResumeState) -> ResumeState:
     """
     Tailor experience section by reordering and emphasizing relevant experience.
@@ -21,10 +28,12 @@ def tailor_experience(state: ResumeState) -> ResumeState:
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         job_requirements = state['job_requirements']
         
+        # Get Australian English instruction if enabled
+        au_english_instruction = get_australian_english_instruction() if UTILS_AVAILABLE else ""
         
         prompt = f"""
 You are optimising the *Experience* section of a MASTER résumé
-to create a *Targeted Résumé* for ONE specific job.
+to create a *Targeted Résumé* for ONE specific job.{au_english_instruction}
 
 ### Context
 • The master CV covers the candidate's actual work experience
@@ -92,7 +101,7 @@ JOB_REQUIREMENTS = {{
             temperature=0.3
         )
         
-        result = safe_json_parse(response.choices[0].message.content, "tailor_experience")
+        result = safe_json_parse(response.choices[0].message.content or "", "tailor_experience")
         
         if result is None:
             print("   ⚠️ Could not parse experience optimization - keeping original")

@@ -27,7 +27,6 @@ class ResumeState(TypedDict):
     certifications_tailored: bool
     extracurricular_tailored: bool
     grammar_checked: bool
-    au_english_converted: bool
     yaml_validated: bool
     
     # Interactive workflow tracking
@@ -40,6 +39,8 @@ class ResumeState(TypedDict):
     
     # Final output
     output_file: Optional[str]
+    # Sections removed by reorder_sections
+    removed_sections: List[str]
 
 def create_initial_state() -> ResumeState:
     """Create initial state with default values"""
@@ -59,13 +60,13 @@ def create_initial_state() -> ResumeState:
         certifications_tailored=False,
         extracurricular_tailored=False,
         grammar_checked=False,
-        au_english_converted=False,
         yaml_validated=False,
         workflow_terminated_by_user=False,
         termination_node=None,
         errors=[],
         warnings=[],
-        output_file=None
+        output_file=None,
+        removed_sections=[],
     )
 
 def load_cv_from_file(filepath: str) -> Dict[str, Any]:

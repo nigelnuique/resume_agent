@@ -21,7 +21,6 @@ from nodes.tailor_education import tailor_education
 from nodes.tailor_skills import tailor_skills
 from nodes.tailor_certifications import tailor_certifications
 from nodes.tailor_extracurricular import tailor_extracurricular
-from nodes.convert_au_english import convert_au_english
 from nodes.validate_yaml import validate_yaml
 from utils.interactive_rendering import save_and_render_cv, get_next_node_name
 
@@ -87,7 +86,6 @@ def setup_interactive_workflow():
         "tailor_certifications": create_interactive_node(tailor_certifications, "tailor_certifications"),
         "tailor_extracurricular": create_interactive_node(tailor_extracurricular, "tailor_extracurricular"),
         "reorder_sections": create_interactive_node(reorder_sections, "reorder_sections"),
-        "convert_au_english": create_interactive_node(convert_au_english, "convert_au_english"),
         "validate_yaml": create_interactive_node(validate_yaml, "validate_yaml")
     }
     
@@ -198,7 +196,6 @@ def print_interactive_summary(state: ResumeState) -> None:
         ("Certifications tailored", state.get('certifications_tailored', False)),
         ("Extracurricular tailored", state.get('extracurricular_tailored', False)),
         ("Sections reordered", state.get('sections_reordered', False)),
-        ("Australian English converted", state.get('au_english_converted', False)),
         ("YAML validated", state.get('yaml_validated', False))
     ]
     
@@ -282,27 +279,44 @@ def run_interactive_workflow():
     # Define the workflow sequence
     workflow_sequence = [
         "parse_job_ad",
-        "update_summary", 
+        "reorder_sections",
+        "update_summary",
         "tailor_experience",
         "tailor_projects",
         "tailor_education",
         "tailor_certifications",
         "tailor_extracurricular",
         "tailor_skills",
-        "reorder_sections",
-        "convert_au_english",
         "validate_yaml"
     ]
     
+    # Map tailoring nodes to their section names for skipping
+    tailoring_section_map = {
+        "tailor_experience": "experience",
+        "tailor_projects": "projects",
+        "tailor_education": "education",
+        "tailor_certifications": "certifications",
+        "tailor_extracurricular": "extracurricular",
+        "tailor_skills": "skills"
+    }
+
     print("\n⚙️ Running interactive tailoring workflow...")
     print("-" * 40)
     
     try:
         # Execute each node in sequence
         for node_name in workflow_sequence:
+            # Skip tailoring nodes if their section was removed
+            if node_name in tailoring_section_map:
+                removed = state.get('removed_sections', [])
+                section = tailoring_section_map[node_name]
+                if section in removed:
+                    print(f"⏭️ Skipping {node_name} (section '{section}' was removed)")
+                    state[f'{node_name}_skipped'] = True
+                    state[f'{section}_tailored'] = True
+                    continue
             if node_name in interactive_nodes:
                 state = interactive_nodes[node_name](state)
-                
                 # Check if user chose to stop
                 if state.get('workflow_terminated_by_user', False):
                     break

@@ -1,34 +1,26 @@
 """
-Resume Agent Utilities Package
+Utility functions for the Resume Agent system.
 
-This package contains library-based alternatives to LLM-powered functions,
-providing cost-effective and reliable utilities for resume processing.
-
-Modules:
-- text_utils: Lightweight text analysis and validation
-- date_validator: Date parsing, validation, and consistency checking
-- section_optimizer: Rule-based section ordering and optimization
+Available utilities:
+- text_utils: Word counting and summary validation
+- interactive_rendering: Interactive workflow utilities
+- get_australian_english_instruction: Australian English toggle utility
 """
 
-__version__ = "1.0.0"
+import os
 
-# Import main utility functions for easy access
-try:
-    from .text_utils import count_words_sentences, validate_summary_constraints, get_text_statistics
-    from .date_validator import validate_experience_dates, validate_education_dates, calculate_total_experience
-    from .section_optimizer import optimize_section_structure, validate_section_optimization
+def get_australian_english_instruction() -> str:
+    """
+    Get the Australian English instruction based on environment variable.
     
-    __all__ = [
-        'count_words_sentences',
-        'validate_summary_constraints', 
-        'get_text_statistics',
-        'validate_experience_dates',
-        'validate_education_dates',
-        'calculate_total_experience',
-        'optimize_section_structure',
-        'validate_section_optimization'
-    ]
-    
-except ImportError as e:
-    print(f"⚠️ Some utilities may not be available due to missing dependencies: {e}")
-    __all__ = [] 
+    Returns:
+        String with instruction to use Australian English spelling if enabled
+    """
+    if os.getenv("AUSTRALIAN_ENGLISH", "false").lower() == "true":
+        return " Use Australian English spelling (e.g., 'colour' not 'color', 'centre' not 'center', 'organisation' not 'organization')."
+    return ""
+
+# Export the function
+__all__ = [
+    'get_australian_english_instruction',
+] 
