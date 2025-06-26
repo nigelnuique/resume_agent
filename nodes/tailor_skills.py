@@ -304,12 +304,18 @@ JOB_REQUIREMENTS = {{
                         ai_category['details'] += f", {skill_name}"
                     else:
                         validated_skills.append({'label': 'AI & ML', 'details': skill_name})
-                elif any(viz_term in skill_lower for viz_term in ['tableau', 'plotly', 'matplotlib', 'seaborn', 'visualization', 'dashboard', 'chart']):
+                elif any(viz_term in skill_lower for viz_term in ['tableau', 'plotly', 'matplotlib', 'seaborn', 'visualization', 'dashboard', 'chart', 'power bi', 'powerbi']):
                     # Visualization category
                     viz_category = next((s for s in validated_skills if s['label'].lower() in ['visualization', 'visualisation', 'dashboards']), None)
                     if viz_category:
+                        # Normalize Power BI spelling for consistency
+                        if skill_name.lower() in ['powerbi']:
+                            skill_name = 'Power BI'
                         viz_category['details'] += f", {skill_name}"
                     else:
+                        # Normalize Power BI spelling for consistency
+                        if skill_name.lower() in ['powerbi']:
+                            skill_name = 'Power BI'
                         validated_skills.append({'label': 'Visualization', 'details': skill_name})
                 else:
                     # Tools/Other category as fallback
