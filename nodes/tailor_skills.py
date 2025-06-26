@@ -57,7 +57,7 @@ You are optimising the *Skills* section of a MASTER résumé
 to create a *Targeted Résumé* for ONE specific job.
 
 ### Context
-• The master CV covers multiple fields (data science, electronics,
+• The master CV covers multiple fields (for example:data science, electronics,
   IT support, customer success, etc.).
 • The target role is described below – highlight what matters and
   downplay / delete what doesn't.
@@ -77,15 +77,15 @@ JOB_REQUIREMENTS = {{
      or obvious ATS keywords in the ad.
    - *Nice to keep*: transferable or supporting skills (keep only the
      top 3-5 that strengthen the application).
-   - *Remove/merge*: clearly off-topic or niche stacks that dilute focus.
+   - *Remove*: irrelevant, off-topic, niche or irrelevant skills that dilute focus.
 
 2. **Re-categorise & Order**
    - Max 5 categories. Within each, max 6 comma-separated items.
    - Put the most critical category first (e.g., "Programming" for a
      software role, "Tools" for a support role).
    - Each skill entry MUST have 'label' and 'details' fields.
-   - **CRITICAL**: You MUST include ALL legitimate skills from the input.
-     Do not drop any skills that exist in the original master CV.
+   - **CRITICAL**: You MUST include ALL relevant skills from the input.
+     Do not drop any relevant skills that exist in the original master CV.
 
 3. **ATS Keyword Alignment**
    - Where a skill can be labelled two ways, choose the phrasing used
@@ -107,12 +107,12 @@ JOB_REQUIREMENTS = {{
      its legitimate skills to other appropriate categories.
 
 ### CRITICAL RULES:
-- Skills must be specific technologies, tools, or methodologies
+- Skills must be specific technologies, tools, or methodologies. It must answer the question "what can I do", not "who am I".
 - DO NOT use phrases like "Prior experience in..." or "Experience with..."
 - DO NOT list job titles or roles (e.g., "IT Support", "technical support")
 - DO NOT create generic categories like "IT Support & Customer Success"
 - If you can't create a proper soft skills category, don't create one at all
-- **NEVER drop legitimate skills from the original master CV**
+- **NEVER drop relevant skills from the original master CV**
 
 ### Output (MUST be strict JSON):
 {{

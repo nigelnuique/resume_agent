@@ -17,6 +17,7 @@ class ResumeState(TypedDict):
     tailoring_plan: Dict[str, Any]    # Plan for tailoring
     
     # Processing flags
+    job_parsed: bool
     sections_reordered: bool
     summary_updated: bool
     experience_tailored: bool
@@ -25,11 +26,13 @@ class ResumeState(TypedDict):
     skills_tailored: bool
     certifications_tailored: bool
     extracurricular_tailored: bool
-    cross_reference_checked: bool
-    inconsistencies_resolved: bool
     grammar_checked: bool
     au_english_converted: bool
     yaml_validated: bool
+    
+    # Interactive workflow tracking
+    workflow_terminated_by_user: bool
+    termination_node: Optional[str]
     
     # Error tracking
     errors: List[str]
@@ -46,6 +49,7 @@ def create_initial_state() -> ResumeState:
         working_cv={},
         job_requirements={},
         tailoring_plan={},
+        job_parsed=False,
         sections_reordered=False,
         summary_updated=False,
         experience_tailored=False,
@@ -54,11 +58,11 @@ def create_initial_state() -> ResumeState:
         skills_tailored=False,
         certifications_tailored=False,
         extracurricular_tailored=False,
-        cross_reference_checked=False,
-        inconsistencies_resolved=False,
         grammar_checked=False,
         au_english_converted=False,
         yaml_validated=False,
+        workflow_terminated_by_user=False,
+        termination_node=None,
         errors=[],
         warnings=[],
         output_file=None
