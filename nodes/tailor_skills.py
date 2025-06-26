@@ -57,10 +57,8 @@ You are optimising the *Skills* section of a MASTER résumé
 to create a *Targeted Résumé* for ONE specific job.
 
 ### Context
-• The master CV covers multiple fields (for example:data science, electronics,
-  IT support, customer success, etc.).
-• The target role is described below – highlight what matters and
-  downplay / delete what doesn't.
+• The master CV covers multiple fields (data science, electronics, IT support, customer success, etc.)
+• The target role is described below – highlight what matters and downplay/delete what doesn't
 
 ### Inputs
 CURRENT_SKILLS  = {valid_skills}
@@ -71,48 +69,42 @@ JOB_REQUIREMENTS = {{
   "essential_requirements": {job_requirements.get('essential_requirements', [])}
 }}
 
-### What to do
+### Instructions
 1. **Relevance Test**
-   - *Must keep*: skills that map directly to essential requirements
-     or obvious ATS keywords in the ad.
-   - *Nice to keep*: transferable or supporting skills (keep only the
-     top 3-5 that strengthen the application).
-   - *Remove*: irrelevant, off-topic, niche or irrelevant skills that dilute focus.
+   - *Must keep*: skills that map directly to essential requirements or ATS keywords
+   - *Nice to keep*: top 3-5 transferable/supporting skills that strengthen the application
+   - *Remove*: irrelevant, off-topic, or niche skills that dilute focus
 
 2. **Re-categorise & Order**
-   - Max 5 categories. Within each, max 6 comma-separated items.
-   - Put the most critical category first (e.g., "Programming" for a
-     software role, "Tools" for a support role).
-   - Each skill entry MUST have 'label' and 'details' fields.
-   - **CRITICAL**: You MUST include ALL relevant skills from the input.
-     Do not drop any relevant skills that exist in the original master CV.
+   - Max 5 categories, max 6 comma-separated items per category
+   - Put most critical category first (e.g., "Programming" for software roles)
+   - Each skill entry MUST have 'label' and 'details' fields
+   - **CRITICAL**: Include ALL relevant skills from the input - do not drop any
 
 3. **ATS Keyword Alignment**
-   - Where a skill can be labelled two ways, choose the phrasing used
-     in the job ad (e.g., "Windows Admin" over "Microsoft OS" if that
-     matches the posting).
+   - Choose phrasing used in the job ad when possible (e.g., "Windows Admin" over "Microsoft OS")
 
 4. **Soft Skills (ONLY if relevant)**
-   - If the role mentions customer onboarding, training, stakeholder
-     communication, etc., add ONE concise soft-skill line.
+   - Add ONE concise soft-skill line only if role mentions customer onboarding, training, stakeholder communication, etc.
+   - Convert trait descriptors to action-oriented capability nouns (e.g., "team player" → "collaboration")
    - Use specific skills like "Technical communication & end-user training"
-   - DO NOT use generic phrases like "Prior experience in..." or list job titles.
+   - **CRITICAL**: Only include soft skills explicitly mentioned in candidate's experience/education
+   - DO NOT invent soft skills based on job requirements alone
 
 5. **Preserve truthfulness**
-   - Do **not** invent new technologies; only reorder, rename,
-     or merge existing items.
-   - Maintain the exact same skill names from the input.
-   - Skills should be specific technologies, tools, or methodologies.
-   - **IMPORTANT**: If you remove a category, make sure to redistribute
-     its legitimate skills to other appropriate categories.
+   - Do NOT invent new technologies; only reorder, rename, or merge existing items
+   - Maintain exact same skill names from input
+   - Skills must be specific technologies, tools, or methodologies
+   - If removing a category, redistribute its legitimate skills to other appropriate categories
 
 ### CRITICAL RULES:
-- Skills must be specific technologies, tools, or methodologies. It must answer the question "what can I do", not "who am I".
+- Skills must be specific technologies, tools, or methodologies
 - DO NOT use phrases like "Prior experience in..." or "Experience with..."
 - DO NOT list job titles or roles (e.g., "IT Support", "technical support")
 - DO NOT create generic categories like "IT Support & Customer Success"
-- If you can't create a proper soft skills category, don't create one at all
 - **NEVER drop relevant skills from the original master CV**
+- **NEVER invent skills that don't exist in the candidate's background**
+- **NEVER create skills based on job requirements alone**
 
 ### Output (MUST be strict JSON):
 {{
@@ -134,13 +126,13 @@ JOB_REQUIREMENTS = {{
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are an expert resume writer. Always return valid JSON with the exact structure requested. Each skill must be a dictionary with 'label' and 'details' fields."},
+                {"role": "system", "content": "You are an expert resume writer. Always return valid JSON with the exact structure requested. Each skill must be a dictionary with 'label' and 'details' fields. CRITICAL: Only use skills that actually exist in the candidate's background. NEVER invent or hallucinate skills based on job requirements alone."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.4
         )
         
-        result = safe_json_parse(response.choices[0].message.content, "tailor_skills")
+        result = safe_json_parse(response.choices[0].message.content or "", "tailor_skills")
         
         if result is None:
             # Provide fallback behavior - keep original skills

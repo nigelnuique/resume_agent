@@ -72,6 +72,19 @@ def validate_yaml(state: ResumeState) -> ResumeState:
             validation_errors.extend(errors)
             validation_warnings.extend(warnings)
         
+        # --- Fix C++ in skills section for RenderCV/Markdown compatibility ---
+        if 'sections' in cv_data and 'skills' in cv_data['sections']:
+            skills = cv_data['sections']['skills']
+            for i, skill in enumerate(skills):
+                if isinstance(skill, dict) and 'details' in skill and isinstance(skill['details'], str):
+                    # Replace C++ with `C++` if not already quoted/escaped
+                    original = skill['details']
+                    fixed = original.replace('C++', '`C++`')
+                    if fixed != original:
+                        skill['details'] = fixed
+                        validation_warnings.append(f"skills: Entry {i} - Replaced 'C++' with '`C++`' for Markdown safety.")
+        # --- End C++ fix ---
+        
         # Update state
         state['errors'].extend(validation_errors)
         state['warnings'].extend(validation_warnings)
