@@ -33,7 +33,8 @@ TASK: Analyze the resume sections and job requirements, then return a JSON respo
 3. reasoning: Object explaining why each section was kept/removed/reordered
 
 RULES:
-- Remove sections not relevant to the role (e.g., extracurricular for senior roles)
+- Remove sections not relevant to the role
+- For extracurricular section check first if any of them are relevant. If not, remove the section.
 - Keep sections that demonstrate relevant skills and experience
 - Order sections by importance to the job requirements
 - Be specific about why each section is kept, removed, or reordered
