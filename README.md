@@ -12,6 +12,8 @@ Resume Agent uses a multi-step AI workflow to analyze job advertisements and tai
 - **Section Reordering**: Prioritizes resume sections based on job requirements
 - **Content Tailoring**: Customizes professional summary, experience, projects, education, and skills
 - **Cross-Reference Validation**: Ensures consistency and eliminates unsupported claims
+- **Anti-Hallucination Safeguards**: Prevents AI from inventing skills or experience not present in the master CV
+- **Optimized AI Prompts**: Streamlined, reusable prompts that work for any candidate background
 - **Australian English Conversion**: Standardizes spelling for Australian job market
 - **YAML Validation**: Ensures RenderCV compatibility
 - **Automated Rendering**: Generates PDF, HTML, and other formats using RenderCV
@@ -185,6 +187,27 @@ The toggle affects all AI-generated content, ensuring consistency throughout the
 3. **Review Generated Content**: Always review AI-generated changes before submission
 4. **Maintain Truthfulness**: The system emphasizes accuracy over embellishment
 5. **Regular Updates**: Keep your master resume current with new experiences
+
+## AI Safety and Accuracy
+
+The system includes multiple safeguards to ensure truthful and accurate resume tailoring:
+
+### Anti-Hallucination Protection
+- **Skills Validation**: AI can only mention skills explicitly listed in your master CV
+- **Experience Verification**: No professional experience is invented or inflated
+- **Cross-Reference Checks**: Every claim is validated against your actual background
+- **Fallback Mechanisms**: If AI responses are invalid, the system uses your original content
+
+### Truthfulness Emphasis
+- **Honest Transitions**: Career changes are presented truthfully (e.g., "Professional transitioning to [field]")
+- **Experience Level Accuracy**: Distinguishes between professional work and academic/project experience
+- **No Skill Invention**: Technical skills are only mentioned if they exist in your skills section
+- **Background Preservation**: Your genuine strengths are emphasized rather than trying to match every job requirement
+
+### Prompt Optimization
+- **Reusable Design**: Prompts work for any candidate background, not tailored to specific users
+- **Consistent Quality**: Streamlined prompts reduce redundancy while maintaining effectiveness
+- **General Applicability**: System adapts to various industries and career levels
 
 ## Troubleshooting
 
