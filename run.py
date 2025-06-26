@@ -24,7 +24,6 @@ from nodes.tailor_certifications import tailor_certifications
 from nodes.tailor_extracurricular import tailor_extracurricular
 from nodes.cross_reference_check import cross_reference_check
 from nodes.resolve_inconsistencies import resolve_inconsistencies
-from nodes.grammar_tone_check import grammar_tone_check
 from nodes.convert_au_english import convert_au_english
 from nodes.validate_yaml import validate_yaml
 
@@ -46,7 +45,6 @@ def setup_workflow() -> StateGraph:
     workflow.add_node("tailor_extracurricular", tailor_extracurricular)
     workflow.add_node("cross_reference_check", cross_reference_check)
     workflow.add_node("resolve_inconsistencies", resolve_inconsistencies)
-    workflow.add_node("grammar_tone_check", grammar_tone_check)
     workflow.add_node("convert_au_english", convert_au_english)
     workflow.add_node("validate_yaml", validate_yaml)
     
@@ -64,8 +62,7 @@ def setup_workflow() -> StateGraph:
     workflow.add_edge("tailor_skills", "reorder_sections")
     workflow.add_edge("reorder_sections", "cross_reference_check")
     workflow.add_edge("cross_reference_check", "resolve_inconsistencies")
-    workflow.add_edge("resolve_inconsistencies", "grammar_tone_check")
-    workflow.add_edge("grammar_tone_check", "convert_au_english")
+    workflow.add_edge("resolve_inconsistencies", "convert_au_english")
     workflow.add_edge("convert_au_english", "validate_yaml")
     workflow.add_edge("validate_yaml", END)
     
@@ -239,7 +236,6 @@ def print_summary(state: ResumeState) -> None:
         ("Extracurricular tailored", state.get('extracurricular_tailored', False)),
         ("Cross-reference checked", state.get('cross_reference_checked', False)),
         ("Inconsistencies resolved", state.get('inconsistencies_resolved', False)),
-        ("Grammar checked", state.get('grammar_checked', False)),
         ("Australian English converted", state.get('au_english_converted', False)),
         ("YAML validated", state.get('yaml_validated', False))
     ]
