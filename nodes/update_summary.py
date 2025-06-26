@@ -11,6 +11,7 @@ from .json_utils import safe_json_parse, create_fallback_response
 # Import library-based utilities for validation
 try:
     from utils.text_utils import count_words_sentences, validate_summary_constraints
+    from utils import get_australian_english_instruction
     UTILS_AVAILABLE = True
 except ImportError:
     UTILS_AVAILABLE = False
@@ -29,9 +30,12 @@ def update_summary(state: ResumeState) -> ResumeState:
         current_summary = state['working_cv']['cv']['sections'].get('professional_summary', [])
         job_requirements = state['job_requirements']
         
+        # Get Australian English instruction if enabled
+        au_english_instruction = get_australian_english_instruction() if UTILS_AVAILABLE else ""
+        
         prompt = f"""
 You are updating the *Professional Summary* section of a MASTER résumé
-to create a *Targeted Résumé* for ONE specific job.
+to create a *Targeted Résumé* for ONE specific job.{au_english_instruction}
 
 ### Context
 • The master CV covers the candidate's actual background and experience
@@ -76,7 +80,7 @@ JOB_REQUIREMENTS = {{
 - Be honest about their background and transitions
 - Focus on transferable skills and genuine qualifications
 - Match the tone to the job requirements and company culture
-- Do not describe the candidate with a generic title, use a title based on the job ad
+- Avoid vague headers like “Technical Professional.” Use the exact role title from the job ad, or—if that title doesn’t match the candidate’s background—substitute “[industry] professional,” e.g., “Data Professional.”
 
 ### Output (MUST be strict JSON):
 {{

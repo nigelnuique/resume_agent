@@ -20,26 +20,14 @@ Resume Agent uses a multi-step AI workflow to analyze job advertisements and tai
 ## System Architecture
 
 ```
-Resume Agent/
-├── nodes/                    # Processing nodes
-│   ├── parse_job_ad.py      # Job advertisement analysis
-│   ├── reorder_sections.py  # Section prioritization
-│   ├── update_summary.py    # Professional summary tailoring
-│   ├── tailor_experience.py # Experience section optimization
-│   ├── tailor_projects.py   # Projects section customization
-│   ├── tailor_education.py  # Education section tailoring
-│   ├── tailor_skills.py     # Skills section optimization
-│   ├── convert_au_english.py    # Spelling standardization
-│   └── validate_yaml.py         # RenderCV compatibility check
-├── utils/                   # Utility functions
-│   └── interactive_rendering.py # Interactive workflow utilities
-├── state.py                 # Shared state management
-├── run.py                   # Main orchestration script
-├── run_interactive.py       # Interactive workflow script
-├── master_CV.yaml          # Your master resume
-├── job_advertisement.txt   # Target job posting
-├── working_CV.yaml        # Generated tailored resume
-└── rendercv_output/       # Rendered resume files
+Resume_Agent/
+├── nodes/           # Workflow nodes (LangGraph)
+├── utils/           # Utility functions
+├── markdown/        # Template files
+├── rendercv_output/ # Generated CV files
+├── run.py          # Main entry point
+├── state.py        # State management
+└── requirements.txt # Dependencies
 ```
 
 ## Installation
@@ -145,14 +133,13 @@ For step-by-step control and review:
 ## Workflow Steps
 
 1. **Parse Job Advertisement**: Extracts requirements, technologies, and cultural indicators
-2. **Reorder Sections**: Prioritizes sections based on job emphasis
+2. **Reorder Sections**: Prioritizes sections based on job emphasis and removes irrelevant sections
 3. **Update Summary**: Tailors professional summary to match role
 4. **Tailor Experience**: Reorders and optimizes experience entries
 5. **Tailor Projects**: Emphasizes relevant project experience
 6. **Tailor Education**: Highlights relevant academic achievements
 7. **Tailor Skills**: Matches skill terminology and removes irrelevant items
-8. **Convert to Australian English**: Standardizes spelling
-9. **Validate YAML**: Ensures RenderCV compatibility
+8. **Validate YAML**: Ensures RenderCV compatibility
 
 ## Configuration
 
@@ -163,12 +150,28 @@ Create a `.env` file in the project root with the following variables:
 - `OPENAI_MODEL`: Optional, defaults to 'gpt-4'
 - `OPENAI_TEMPERATURE`: Optional, controls AI response randomness (0.0-1.0)
 - `DEBUG`: Optional, enables debug mode (true/false)
+- `AUSTRALIAN_ENGLISH`: Optional, use Australian English spelling throughout (true/false, default: false)
 
 **Quick Setup:**
 ```bash
 python setup_env.py  # Creates .env from template
 # Then edit .env and add your actual API key
 ```
+
+### Australian English Toggle
+Enable Australian English spelling throughout the resume tailoring process:
+```bash
+# In your .env file:
+AUSTRALIAN_ENGLISH=true
+```
+
+This will automatically convert spellings like:
+- "color" → "colour"
+- "center" → "centre" 
+- "organization" → "organisation"
+- "realize" → "realise"
+
+The toggle affects all AI-generated content, ensuring consistency throughout the tailored resume.
 
 ### Customization Options
 - Modify node logic in `nodes/` directory for custom tailoring rules

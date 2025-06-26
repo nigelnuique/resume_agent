@@ -22,7 +22,6 @@ from nodes.tailor_education import tailor_education
 from nodes.tailor_skills import tailor_skills
 from nodes.tailor_certifications import tailor_certifications
 from nodes.tailor_extracurricular import tailor_extracurricular
-from nodes.convert_au_english import convert_au_english
 from nodes.validate_yaml import validate_yaml
 
 def setup_workflow() -> StateGraph:
@@ -31,33 +30,47 @@ def setup_workflow() -> StateGraph:
     # Create the graph
     workflow = StateGraph(ResumeState)
     
-    # Add all nodes
+    # Add core nodes (non-tailoring nodes)
     workflow.add_node("parse_job_ad", parse_job_ad)
     workflow.add_node("reorder_sections", reorder_sections)
     workflow.add_node("update_summary", update_summary)
-    workflow.add_node("tailor_experience", tailor_experience)
-    workflow.add_node("tailor_projects", tailor_projects)
-    workflow.add_node("tailor_education", tailor_education)
-    workflow.add_node("tailor_skills", tailor_skills)
-    workflow.add_node("tailor_certifications", tailor_certifications)
-    workflow.add_node("tailor_extracurricular", tailor_extracurricular)
-    workflow.add_node("convert_au_english", convert_au_english)
     workflow.add_node("validate_yaml", validate_yaml)
     
     # Define the workflow sequence
     workflow.set_entry_point("parse_job_ad")
     
-    # Workflow: Parse job → Tailor individual sections → Reorder/optimize → Final checks
-    workflow.add_edge("parse_job_ad", "update_summary")
+    # New order: Parse job → Reorder/optimize → Tailor individual sections → Final checks
+    workflow.add_edge("parse_job_ad", "reorder_sections")
+    workflow.add_edge("reorder_sections", "update_summary")
+
+    # Helper function for conditional skipping
+    def skip_if_removed(section_name, node_name):
+        def wrapper(state: ResumeState) -> ResumeState:
+            removed = state.get('removed_sections', [])
+            if section_name in removed:
+                print(f"⏭️ Skipping {node_name} (section '{section_name}' was removed)")
+                state[f'{node_name}_skipped'] = True
+                # Set the tailored flag to True so summary shows as completed
+                state[f'{section_name}_tailored'] = True
+                return state
+            return globals()[node_name](state)
+        return wrapper
+
+    # Add tailoring nodes with conditional wrappers
+    workflow.add_node("tailor_experience", skip_if_removed('experience', 'tailor_experience'))
+    workflow.add_node("tailor_projects", skip_if_removed('projects', 'tailor_projects'))
+    workflow.add_node("tailor_education", skip_if_removed('education', 'tailor_education'))
+    workflow.add_node("tailor_certifications", skip_if_removed('certifications', 'tailor_certifications'))
+    workflow.add_node("tailor_extracurricular", skip_if_removed('extracurricular', 'tailor_extracurricular'))
+    workflow.add_node("tailor_skills", skip_if_removed('skills', 'tailor_skills'))
+
     workflow.add_edge("update_summary", "tailor_experience")
     workflow.add_edge("tailor_experience", "tailor_projects")
     workflow.add_edge("tailor_projects", "tailor_education")
     workflow.add_edge("tailor_education", "tailor_certifications")
     workflow.add_edge("tailor_certifications", "tailor_extracurricular")
     workflow.add_edge("tailor_extracurricular", "tailor_skills")
-    workflow.add_edge("tailor_skills", "reorder_sections")
-    workflow.add_edge("reorder_sections", "convert_au_english")
-    workflow.add_edge("convert_au_english", "validate_yaml")
+    workflow.add_edge("tailor_skills", "validate_yaml")
     workflow.add_edge("validate_yaml", END)
     
     return workflow
@@ -228,7 +241,6 @@ def print_summary(state: ResumeState) -> None:
         ("Skills tailored", state.get('skills_tailored', False)),
         ("Certifications tailored", state.get('certifications_tailored', False)),
         ("Extracurricular tailored", state.get('extracurricular_tailored', False)),
-        ("Australian English converted", state.get('au_english_converted', False)),
         ("YAML validated", state.get('yaml_validated', False))
     ]
     

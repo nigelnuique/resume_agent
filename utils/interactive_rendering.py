@@ -127,6 +127,7 @@ def get_next_node_name(current_node: str) -> str:
     """
     workflow_sequence = [
         "parse_job_ad",
+        "reorder_sections",
         "update_summary", 
         "tailor_experience",
         "tailor_projects",
@@ -134,8 +135,6 @@ def get_next_node_name(current_node: str) -> str:
         "tailor_certifications",
         "tailor_extracurricular",
         "tailor_skills",
-        "reorder_sections",
-        "convert_au_english",
         "validate_yaml"
     ]
     
