@@ -60,6 +60,11 @@ Resume Agent/
    ```bash
    pip install -r requirements.txt
    ```
+   
+   **Note:** The requirements now specify `rendercv[full]` to ensure all rendering features are available. If you install manually, use:
+   ```bash
+   pip install "rendercv[full]"
+   ```
 
 3. **Set up OpenAI API key**:
    ```bash
@@ -165,7 +170,8 @@ python setup_env.py  # Creates .env from template
    - Validate YAML syntax
 
 3. **RenderCV Rendering Issues**:
-   - Verify RenderCV installation: `rendercv --version`
+   - Verify RenderCV installation: `python -m rendercv --version` (use this instead of `rendercv --version` if the command is not found)
+   - If you see a message about partial installation, run: `pip install "rendercv[full]"`
    - Check for unsupported characters or formatting
    - Review generated working_CV.yaml for issues
 
