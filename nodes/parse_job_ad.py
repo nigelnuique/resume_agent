@@ -43,17 +43,17 @@ def parse_job_ad(state: ResumeState) -> ResumeState:
         job_requirements = safe_json_parse(response.choices[0].message.content, "parse_job_ad")
         
         if job_requirements is None:
-            # Fallback with basic parsing
+            # Fallback with empty values to avoid hard-coded defaults
             print("   ⚠️ Using fallback job parsing")
             job_requirements = create_fallback_response("parse_job_ad", {
-                'essential_requirements': ['Python', 'SQL', 'Data Analysis'],
-                'preferred_requirements': ['Machine Learning', 'Cloud Technologies'],
-                'key_technologies': ['Python', 'SQL', 'Git'],
-                'soft_skills': ['Communication', 'Problem Solving'],
-                'role_focus': ['Data Engineering', 'Analytics'],
-                'industry_domain': 'Tech',
-                'company_culture': 'Collaborative',
-                'experience_level': '2+ years'
+                'essential_requirements': [],
+                'preferred_requirements': [],
+                'key_technologies': [],
+                'soft_skills': [],
+                'role_focus': [],
+                'industry_domain': '',
+                'company_culture': '',
+                'experience_level': ''
             })
         
         state['job_requirements'] = job_requirements
