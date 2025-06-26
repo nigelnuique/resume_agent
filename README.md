@@ -12,7 +12,6 @@ Resume Agent uses a multi-step AI workflow to analyze job advertisements and tai
 - **Section Reordering**: Prioritizes resume sections based on job requirements
 - **Content Tailoring**: Customizes professional summary, experience, projects, education, and skills
 - **Cross-Reference Validation**: Ensures consistency and eliminates unsupported claims
-- **Grammar & Tone Optimization**: Polishes language to match company culture
 - **Australian English Conversion**: Standardizes spelling for Australian job market
 - **YAML Validation**: Ensures RenderCV compatibility
 - **Automated Rendering**: Generates PDF, HTML, and other formats using RenderCV
@@ -31,7 +30,6 @@ Resume Agent/
 │   ├── tailor_skills.py     # Skills section optimization
 │   ├── cross_reference_check.py    # Consistency validation
 │   ├── resolve_inconsistencies.py # Automatic inconsistency resolution
-│   ├── grammar_tone_check.py       # Language optimization
 │   ├── convert_au_english.py    # Spelling standardization
 │   └── validate_yaml.py         # RenderCV compatibility check
 ├── state.py                 # Shared state management
@@ -122,9 +120,8 @@ Resume Agent/
 7. **Tailor Skills**: Matches skill terminology and removes irrelevant items
 8. **Cross-Reference Check**: Validates consistency across sections
 9. **Resolve Inconsistencies**: Automatically fixes unsupported claims and inconsistencies
-10. **Grammar & Tone Check**: Polishes language and tone
-11. **Convert to Australian English**: Standardizes spelling
-12. **Validate YAML**: Ensures RenderCV compatibility
+10. **Convert to Australian English**: Standardizes spelling
+11. **Validate YAML**: Ensures RenderCV compatibility
 
 ## Configuration
 
