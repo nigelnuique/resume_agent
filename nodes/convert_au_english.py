@@ -28,7 +28,7 @@ def convert_au_english(state: ResumeState) -> ResumeState:
                 temperature=0
             )
 
-            return response.choices[0].message.content.strip()
+            return response.choices[0].message.content.strip() if response.choices[0].message.content else ""
 
         def convert_section(data):
             if isinstance(data, str):
@@ -40,6 +40,12 @@ def convert_au_english(state: ResumeState) -> ResumeState:
             return data
 
         sections = state['working_cv']['cv']['sections']
+        
+        # Ensure sections is a dictionary
+        if not isinstance(sections, dict):
+            print("   ⚠️ Sections is not a dictionary, skipping Australian English conversion")
+            state['au_english_converted'] = True
+            return state
 
         for name, content in sections.items():
             sections[name] = convert_section(content)

@@ -44,6 +44,7 @@ JOB_REQUIREMENTS = {{
    - Select the most relevant coursework (max 5 courses per institution)
    - Prioritize courses that align with job requirements
    - Remove irrelevant courses that don't add value
+   - If no courses are relevant, omit the coursework highlight entirely.
 
 2. **Content Optimization**
    - Keep all factual information (institution, degree, dates, GPA, etc.)

@@ -76,6 +76,7 @@ JOB_REQUIREMENTS = {{
 - Be honest about their background and transitions
 - Focus on transferable skills and genuine qualifications
 - Match the tone to the job requirements and company culture
+- Do not describe the candidate with a generic title, use a title based on the job ad
 
 ### Output (MUST be strict JSON):
 {{

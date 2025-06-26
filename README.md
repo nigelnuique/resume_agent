@@ -15,6 +15,7 @@ Resume Agent uses a multi-step AI workflow to analyze job advertisements and tai
 - **Australian English Conversion**: Standardizes spelling for Australian job market
 - **YAML Validation**: Ensures RenderCV compatibility
 - **Automated Rendering**: Generates PDF, HTML, and other formats using RenderCV
+- **Interactive Workflow**: Step-by-step execution with user control and CV rendering after each step
 
 ## System Architecture
 
@@ -28,12 +29,13 @@ Resume Agent/
 │   ├── tailor_projects.py   # Projects section customization
 │   ├── tailor_education.py  # Education section tailoring
 │   ├── tailor_skills.py     # Skills section optimization
-│   ├── cross_reference_check.py    # Consistency validation
-│   ├── resolve_inconsistencies.py # Automatic inconsistency resolution
 │   ├── convert_au_english.py    # Spelling standardization
 │   └── validate_yaml.py         # RenderCV compatibility check
+├── utils/                   # Utility functions
+│   └── interactive_rendering.py # Interactive workflow utilities
 ├── state.py                 # Shared state management
 ├── run.py                   # Main orchestration script
+├── run_interactive.py       # Interactive workflow script
 ├── master_CV.yaml          # Your master resume
 ├── job_advertisement.txt   # Target job posting
 ├── working_CV.yaml        # Generated tailored resume
@@ -83,6 +85,7 @@ Resume Agent/
 
 ## Usage
 
+### Standard Workflow
 1. **Prepare your master resume**:
    ```bash
    # Copy the template and customize it with your information
@@ -109,6 +112,36 @@ Resume Agent/
    - `working_CV.yaml`: Your tailored resume in YAML format
    - `rendercv_output/`: Rendered files (PDF, HTML, etc.)
 
+### Interactive Workflow
+For step-by-step control and review:
+
+1. **Prepare files as above**
+
+2. **Run the interactive workflow**:
+   ```bash
+   # Option 1: Direct Python execution
+   python run_interactive.py
+   
+   # Option 2: Windows batch file
+   run_interactive.bat
+   
+   # Option 3: Unix/Linux shell script
+   chmod +x run_interactive.sh
+   ./run_interactive.sh
+   ```
+
+3. **Review and control each step**:
+   - After each node completes, the CV is automatically rendered
+   - You can view the rendered CV in `rendercv_output/`
+   - Choose whether to proceed to the next step or stop
+   - Useful for debugging or fine-tuning the tailoring process
+
+**Interactive Workflow Benefits:**
+- Review changes after each tailoring step
+- Stop at any point if you're satisfied with the results
+- Debug issues by examining intermediate states
+- Control the tailoring process for sensitive applications
+
 ## Workflow Steps
 
 1. **Parse Job Advertisement**: Extracts requirements, technologies, and cultural indicators
@@ -118,10 +151,8 @@ Resume Agent/
 5. **Tailor Projects**: Emphasizes relevant project experience
 6. **Tailor Education**: Highlights relevant academic achievements
 7. **Tailor Skills**: Matches skill terminology and removes irrelevant items
-8. **Cross-Reference Check**: Validates consistency across sections
-9. **Resolve Inconsistencies**: Automatically fixes unsupported claims and inconsistencies
-10. **Convert to Australian English**: Standardizes spelling
-11. **Validate YAML**: Ensures RenderCV compatibility
+8. **Convert to Australian English**: Standardizes spelling
+9. **Validate YAML**: Ensures RenderCV compatibility
 
 ## Configuration
 
