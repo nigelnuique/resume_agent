@@ -25,7 +25,7 @@ def extract_technologies_from_text(text: str) -> Set[str]:
         # Cloud & DevOps
         r'\b(?:aws|azure|gcp|docker|kubernetes|jenkins|gitlab|github|terraform|ansible|chef|puppet)\b',
         # Tools & Platforms
-        r'\b(?:git|linux|windows|macos|apache|nginx|hadoop|spark|kafka|airflow|tableau|power bi)\b',
+        r'\b(?:git|linux|windows|macos|apache|nginx|hadoop|spark|kafka|airflow|tableau|power bi|powerbi)\b',
     ]
     
     technologies = set()
@@ -35,7 +35,16 @@ def extract_technologies_from_text(text: str) -> Set[str]:
         matches = re.findall(pattern, text_lower, re.IGNORECASE)
         technologies.update(matches)
     
-    return technologies
+    # Normalize technology names for consistency
+    normalized_technologies = set()
+    for tech in technologies:
+        # Normalize Power BI spellings
+        if tech in ['power bi', 'powerbi']:
+            normalized_technologies.add('power bi')
+        else:
+            normalized_technologies.add(tech)
+    
+    return normalized_technologies
 
 def validate_skills_experience_consistency(skills_section: List[str], experience_section: List[Dict[str, Any]]) -> List[str]:
     """
