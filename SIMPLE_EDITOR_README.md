@@ -201,7 +201,7 @@ design:
 ## Integration with Resume Agent
 
 ### Workflow Integration
-1. **AI Tailoring** → Run `python run.py` or `python run_interactive.py`
+1. **AI Tailoring** → Run `python run.py`
 2. **Manual Refinement** → Use Simple YAML Editor for fine-tuning
 3. **Final Review** → Preview and download final PDF
 
@@ -218,12 +218,12 @@ design:
 
 ## Comparison to Other Tools
 
-| Feature | Simple Editor | Full AI Agent | Interactive Mode |
-|---------|---------------|---------------|------------------|
-| **Speed** | ⚡ Instant | 🔄 2-3 minutes | 🔄 5-10 minutes |
-| **Control** | 🎯 Complete | 🤖 AI-driven | 👥 Collaborative |
-| **Learning** | 📚 Hands-on | 🎓 Observational | 🔍 Step-by-step |
-| **Use Case** | Fine-tuning | Full tailoring | Learning/Debug |
+| Feature | Simple Editor | Full AI Agent |
+|---------|---------------|---------------|
+| **Speed** | ⚡ Instant | 🔄 2-3 minutes |
+| **Control** | 🎯 Complete | 🤖 AI-driven |
+| **Learning** | 📚 Hands-on | 🎓 Observational |
+| **Use Case** | Fine-tuning | Full tailoring |
 
 ### When to Use Simple Editor
 - ✅ Quick formatting fixes

@@ -3,7 +3,6 @@ Utility functions for the Resume Agent system.
 
 Available utilities:
 - text_utils: Word counting and summary validation
-- interactive_rendering: Interactive workflow utilities
 - get_australian_english_instruction: Australian English toggle utility
 """
 
