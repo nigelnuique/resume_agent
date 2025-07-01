@@ -149,7 +149,8 @@ class ResumeAgentUI:
                 
                 socketio.emit('workflow_progress', {
                     'step': 'initializing',
-                    'message': 'Loading initial data...'
+                    'message': 'Loading initial data...',
+                    'progress': 5
                 })
                 
                 # Create initial state
@@ -183,7 +184,8 @@ class ResumeAgentUI:
                 
                 socketio.emit('workflow_progress', {
                     'step': 'workflow_setup',
-                    'message': 'Setting up AI workflow...'
+                    'message': 'Setting up AI workflow...',
+                    'progress': 10
                 })
                 
                 # Set up workflow
@@ -192,28 +194,58 @@ class ResumeAgentUI:
                 
                 # Define workflow steps for progress tracking
                 workflow_steps = [
-                    ('parse_job_ad', 'Analyzing job requirements...'),
-                    ('reorder_sections', 'Optimizing section order...'),
-                    ('update_summary', 'Updating professional summary...'),
-                    ('tailor_experience', 'Tailoring work experience...'),
-                    ('tailor_projects', 'Tailoring projects...'),
-                    ('tailor_education', 'Tailoring education...'),
-                    ('tailor_certifications', 'Tailoring certifications...'),
-                    ('tailor_extracurricular', 'Tailoring extracurricular activities...'),
-                    ('tailor_skills', 'Tailoring skills...'),
-                    ('validate_yaml', 'Validating final output...')
+                    ('parse_job_ad', 'Analyzing job requirements...', 20),
+                    ('reorder_sections', 'Optimizing section order...', 30),
+                    ('update_summary', 'Updating professional summary...', 40),
+                    ('tailor_experience', 'Tailoring work experience...', 50),
+                    ('tailor_projects', 'Tailoring projects...', 60),
+                    ('tailor_education', 'Tailoring education...', 65),
+                    ('tailor_certifications', 'Tailoring certifications...', 70),
+                    ('tailor_extracurricular', 'Tailoring extracurricular activities...', 75),
+                    ('tailor_skills', 'Tailoring skills...', 80),
+                    ('validate_yaml', 'Validating final output...', 85)
                 ]
                 
-                # Run workflow with progress updates
-                for i, (step_name, message) in enumerate(workflow_steps):
-                    socketio.emit('workflow_progress', {
-                        'step': step_name,
-                        'message': message,
-                        'progress': int((i / len(workflow_steps)) * 100)
-                    })
+                # Create step lookup for progress tracking
+                step_lookup = {step_name: (message, progress) for step_name, message, progress in workflow_steps}
                 
-                # Execute the workflow
-                final_state = cast(ResumeState, app_workflow.invoke(state))
+                # Execute workflow with real-time progress tracking using streaming
+                current_step = 0
+                final_state = state  # Initialize with current state
+                
+                try:
+                    # Use streaming to get real-time updates as each node completes
+                    for chunk in app_workflow.stream(state):
+                        # chunk contains {node_name: node_output}
+                        for node_name, node_output in chunk.items():
+                            print(f"🔄 Completed node: {node_name}")
+                            
+                            if node_name in step_lookup:
+                                message, progress = step_lookup[node_name]
+                                socketio.emit('workflow_progress', {
+                                    'step': node_name,
+                                    'message': message,
+                                    'progress': progress
+                                })
+                                current_step += 1
+                                print(f"   ✅ Progress update sent: {message} ({progress}%)")
+                            
+                            # Update final_state with the node output (should be complete ResumeState)
+                            if isinstance(node_output, dict):
+                                final_state = node_output
+                                print(f"   📝 State updated from {node_name}")
+                    
+                    print(f"✅ Workflow streaming completed. Final state type: {type(final_state)}")
+                    
+                except Exception as workflow_error:
+                    # If streaming fails, fall back to regular execution
+                    print(f"⚠️ Streaming failed, falling back to regular execution: {workflow_error}")
+                    socketio.emit('workflow_progress', {
+                        'step': 'fallback',
+                        'message': 'Continuing with standard execution...',
+                        'progress': 50
+                    })
+                    final_state = cast(ResumeState, app_workflow.invoke(state))
                 
                 socketio.emit('workflow_progress', {
                     'step': 'saving',
