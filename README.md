@@ -51,7 +51,6 @@ Resume Agent uses a sophisticated multi-step AI workflow to analyze job advertis
 
 ### 🚀 **Multiple Workflows**
 - **Standard Mode**: Fully automated resume tailoring
-- **Interactive Mode**: Step-by-step control with rendering after each phase
 - **YAML Editor**: Real-time editing with live PDF preview
 
 ### 🎨 **Professional Output**
@@ -78,7 +77,6 @@ cp job_advertisement_template.txt job_advertisement.txt
 
 # 4. Run tailoring
 python run.py                    # Standard mode
-python run_interactive.py        # Interactive mode
 python simple_yaml_editor.py     # Manual editing
 ```
 
@@ -153,36 +151,7 @@ DEBUG=false
    - `working_CV.yaml`: Your tailored resume in YAML format
    - `rendercv_output/`: Rendered files (PDF, HTML, PNG, Markdown)
 
-### Interactive Workflow
 
-**Best for**: Step-by-step control, debugging, or learning how the system works
-
-```bash
-# Run interactive workflow
-python run_interactive.py
-
-# Alternative methods (Windows/Unix)
-run_interactive.bat        # Windows
-./run_interactive.sh       # Unix/Linux
-```
-
-**Interactive Features**:
-- ✅ **Step-by-step execution** with user approval at each stage
-- 🎨 **Automatic rendering** after each tailoring step
-- 🛑 **Stop anytime** if you're satisfied with results
-- 🔍 **Perfect for debugging** and understanding the process
-
-**Workflow Steps**:
-1. **Parse Job Ad** → Extract requirements and analyze job posting
-2. **Reorder Sections** → Prioritize relevant sections, remove irrelevant ones
-3. **Update Summary** → Tailor professional summary to match role
-4. **Tailor Experience** → Optimize work experience entries
-5. **Tailor Projects** → Emphasize relevant project experience
-6. **Tailor Education** → Highlight relevant academic achievements
-7. **Tailor Certifications** → Prioritize relevant certifications
-8. **Tailor Extracurricular** → Showcase relevant activities
-9. **Tailor Skills** → Match skill terminology, remove irrelevant items
-10. **Validate YAML** → Ensure RenderCV compatibility
 
 ### YAML Editor
 
@@ -254,12 +223,12 @@ Resume_Agent/
 │   ├── validate_yaml.py        # YAML validation
 │   └── json_utils.py           # Utility functions
 ├── 📁 utils/                    # Shared utilities
-│   ├── interactive_rendering.py # Interactive workflow support
+
 │   └── text_utils.py           # Text processing utilities
 ├── 📁 markdown/                 # RenderCV templates
 ├── 📁 rendercv_output/          # Generated CV files
 ├── 🐍 run.py                   # Standard workflow entry point
-├── 🐍 run_interactive.py       # Interactive workflow
+
 ├── 🐍 simple_yaml_editor.py    # YAML editor with live preview
 ├── 🐍 state.py                 # State management
 ├── 📋 requirements.txt         # Python dependencies
@@ -370,17 +339,7 @@ pip install "rendercv[full]"
 python -m rendercv render working_CV.yaml
 ```
 
-**Interactive Workflow Issues**
-```bash
-# Port 5000 already in use (YAML editor)
-# Edit simple_yaml_editor.py and change port:
-app.run(debug=True, host='0.0.0.0', port=5001)
 
-# Permission errors
-# Ensure write permissions for:
-# - working_CV.yaml
-# - rendercv_output/ directory
-```
 
 ### 🔍 Debug Mode
 
@@ -393,8 +352,7 @@ DEBUG=true python run.py
 # Method 2: Command line logging
 python -u run.py 2>&1 | tee tailoring.log
 
-# Method 3: Interactive debugging
-python run_interactive.py  # Stop at each step for inspection
+
 ```
 
 ### 📊 Validation Commands
@@ -499,7 +457,7 @@ rendercv_output/
 
 - 📖 **Documentation**: This README and inline code comments
 - 🐛 **Issues**: Check console output and error messages
-- 🔧 **Debugging**: Use interactive mode for step-by-step analysis
+- 🔧 **Debugging**: Check console output and error messages for detailed information
 - 🌐 **OpenAI**: [Platform documentation](https://platform.openai.com/docs)
 - 🎨 **RenderCV**: [Official documentation](https://rendercv.com/)
 

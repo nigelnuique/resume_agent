@@ -78,13 +78,13 @@ resume_agent/
 │   └── validate_yaml.py        # YAML structure validation
 ├── 📁 utils/                   # Shared utilities
 │   ├── __init__.py            # Utils package initialization
-│   ├── interactive_rendering.py # Interactive workflow support
+
 │   └── text_utils.py          # Text processing functions
 ├── 📁 markdown/               # RenderCV template files
 ├── 📁 rendercv_output/        # Generated output files
 ├── 🐍 state.py               # State management and types
 ├── 🐍 run.py                 # Standard workflow entry point
-├── 🐍 run_interactive.py     # Interactive workflow implementation
+
 ├── 🐍 simple_yaml_editor.py  # Web-based YAML editor
 └── 🐍 setup_env.py           # Environment setup utilities
 ```
@@ -95,7 +95,7 @@ resume_agent/
 |------|---------|--------------|
 | `state.py` | State management and type definitions | PyYAML, typing |
 | `run.py` | Main workflow orchestration | LangGraph, all nodes |
-| `run_interactive.py` | Interactive workflow with user control | LangGraph, utils |
+
 | `nodes/*.py` | Individual processing nodes | OpenAI, state |
 | `utils/*.py` | Shared utility functions | Various |
 
@@ -203,27 +203,7 @@ def main():
     render_cv()
 ```
 
-### Interactive Workflow
 
-The interactive workflow wraps each node with user interaction:
-
-```python
-def create_interactive_node(original_node_func, node_name: str):
-    """Create wrapper with user interaction"""
-    def interactive_node(state: ResumeState) -> ResumeState:
-        # Execute original node
-        state = original_node_func(state)
-        
-        # Render and get user input
-        proceed = save_and_render_cv(state, node_name)
-        
-        if not proceed:
-            state['workflow_terminated_by_user'] = True
-            state['termination_node'] = node_name
-            
-        return state
-    return interactive_node
-```
 
 ## Node Development
 
@@ -553,7 +533,7 @@ CMD ["python", "run.py"]
    python -m flake8 .
    
    # Test your changes
-   python run_interactive.py
+   python run.py
    ```
 
 5. **Submit Pull Request**
@@ -604,7 +584,7 @@ CMD ["python", "run.py"]
 
 ### Debugging Tips
 
-1. **Use Interactive Mode**: Step through workflow execution
+1. **Enable Debug Output**: Check console output for detailed information
 2. **Enable Debug Logging**: Set `DEBUG=true` in `.env`
 3. **Check State**: Print state at each step
 4. **Validate JSON**: Use `json_utils.py` for AI response parsing
