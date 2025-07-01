@@ -1,0 +1,135 @@
+cv:
+  name: Nigel Nuique
+  location: Melbourne, Victoria
+  email: nigelnuique@gmail.com
+  phone: +61-435-395-191
+  website: https://nigelnuique.com
+  social_networks:
+  - network: LinkedIn
+    username: nigelnuique
+  - network: GitHub
+    username: nigelnuique
+  sections:
+    professional_summary:
+    - Data Science Professional with a solid foundation in Python, R, and SQL programming,
+      and experience in delivering end-to-end data science projects. Skilled in statistical
+      modeling, quantitative analysis, and machine learning operations (MLOps). Proven
+      track record in collaborating with cross-functional teams and effectively communicating
+      with stakeholders. Experienced in AWS and Databricks, with a keen eye for detail
+      and risk mitigation in complex datasets.
+    skills:
+    - label: Programming
+      details: Python, SQL, R
+    - label: Cloud
+      details: AWS (basic)
+    - label: Tools
+      details: JIRA
+    - label: AI & ML
+      details: scikit-learn, NumPy, pandas
+    - label: Visualization
+      details: matplotlib, seaborn
+    - label: Soft Skills
+      details: Stakeholder Communication & Documentation
+    experience:
+    - company: Natural Velocity
+      position: Strategic Contributor
+      start_date: 2025-06
+      end_date: present
+      location: Melbourne, AU (Hybrid)
+      highlights:
+      - Brought on for data science expertise with flexibility to support strategy,
+        research, and operations
+      - Built a PowerBI dashboard that improved sales pipeline visibility and enabled
+        prioritization of high-impact opportunities
+      - Contributing across initiatives in an early-stage AI and cybersecurity startup
+    - company: Analog Devices
+      position: Test Development Engineer
+      start_date: 2021-10
+      end_date: 2023-01
+      location: Cavite, PH
+      highlights:
+      - Developed test solutions and hardware for 4 new IC products
+      - Led qualifications for 10 products, releasing 40 setups
+      - Improved tester availability by 15% by removing redundant tests
+      - Collaborated across QA, design, and production teams
+    - company: Maxim Integrated (acquired by Analog Devices)
+      position: Associate Member of Technical Staff, Test Systems Development
+      start_date: 2020-01
+      end_date: 2021-10
+      location: Cavite, PH
+      highlights:
+      - Developed hardware and software for automated IC testing
+      - Resolved production line issues with product engineers
+    - company: RMIT University
+      position: Transition Support Officer | Property Audit Assistant
+      start_date: 2023-07
+      end_date: 2024-02
+      location: Melbourne, AU
+      highlights:
+      - Conducted AV/IT audits across 14 buildings
+      - Resolved 37 technical issues and updated 90+ support guides
+      - Ensured classrooms followed layout and cleanliness standards
+    education:
+    - institution: RMIT University
+      area: Data Science
+      degree: MS
+      start_date: 2023-02
+      end_date: 2024-12
+      location: Melbourne, Australia
+      highlights:
+      - Academic merit scholarship
+      - 'GPA: 3.5/4.0 (Distinction)'
+      - 'Capstone Project: Developed an NLP pipeline to harmonise medical concepts
+        using UMLSBERT and SciSpaCy. Used Plotly for interactive dashboards and visual
+        validation of mappings'
+      - 'Relevant Coursework: Algorithms and Analysis, Programming Fundamentals, Practical
+        Data Science with Python, Advanced Programming for Data Science, Database
+        Concepts'
+    - institution: University of San Carlos
+      area: Electronics Engineering
+      degree: BS
+      start_date: 2014-07
+      end_date: 2019-05
+      location: Cebu, Philippines
+      highlights:
+      - Major in Instrumentation and Controls
+      - 'Thesis: Prepaid Solar System for off Grid Communities'
+      - 'Relevant Coursework: Computer Fundamentals & Programming, Probability and
+        Statistics, Numerical Methods, Digital Electronics & Switching Theory, Microprocessor
+        System'
+    projects:
+    - name: '[Clinical Notes AI Agent](https://github.com/nigelnuique/clinical_notes_AI_agent)'
+      end_date: 2025-05
+      summary: Developed a LangGraph-based AI agent that extracts and validates tasks
+        from clinical notes, demonstrating skills in data extraction and validation.
+      highlights:
+      - Extracted pathology, radiology, medication, and follow-up tasks, showcasing
+        data extraction skills.
+      - Sent validated summaries via PDF, email, and SMS, demonstrating communication
+        and reporting skills.
+    - name: '[Layoffs Data Analysis](https://github.com/nigelnuique/layoffs-data-analysis-2023-24)'
+      end_date: 2024-11
+      summary: Conducted a trend analysis of layoffs by industry and season using
+        SQL, demonstrating proficiency in SQL and data analysis.
+      highlights:
+      - Cleaned, transformed, and analysed the datasets using SQL, showcasing data
+        cleaning and transformation skills.
+    - name: '[User Identification from Walking Activity Data](https://github.com/nigelnuique/user_identification_using_walking_data)'
+      end_date: 2024-05
+      summary: Utilized KNN and Decision Trees to identify users based on walking
+        activity, demonstrating skills in machine learning and predictive modeling.
+      highlights:
+      - Achieved 97% accuracy using KNN and 93.1% using Decision Tree, demonstrating
+        effectiveness in model building and deployment.
+    - name: '[Job Search Web Application](https://github.com/nigelnuique/job_search_web_app)'
+      end_date: 2023-12
+      summary: Built a Flask app with job search and job posting functionality, demonstrating
+        skills in full-stack development and deployment.
+      highlights:
+      - Recommended job categories with 87% accuracy using TF-IDF and NLP, showcasing
+        skills in recommendation systems and natural language processing.
+    certifications:
+    - Google Data Analytics Professional Certificate
+    - Azure Data Fundamentals DP-90
+design:
+  theme: engineeringresumes

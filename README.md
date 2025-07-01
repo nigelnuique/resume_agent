@@ -1,6 +1,6 @@
 # Resume Agent - AI-Powered Resume Tailoring System
 
-> 🤖 An intelligent resume tailoring system that automatically customizes your CV based on job advertisements using LangGraph and OpenAI's GPT-4.
+> 🤖 An intelligent resume tailoring system that automatically customizes your CV based on job advertisements using a modern web interface powered by LangGraph and OpenAI's GPT-4.
 
 [![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 [![OpenAI GPT-4](https://img.shields.io/badge/OpenAI-GPT--4-green.svg)](https://openai.com/)
@@ -13,9 +13,6 @@
 - [Quick Start](#quick-start)
 - [Installation](#installation)
 - [Usage](#usage)
-  - [Standard Workflow](#standard-workflow)
-  - [Interactive Workflow](#interactive-workflow)
-  - [YAML Editor](#yaml-editor)
 - [Configuration](#configuration)
 - [System Architecture](#system-architecture)
 - [AI Safety & Accuracy](#ai-safety--accuracy)
@@ -25,12 +22,13 @@
 
 ## Overview
 
-Resume Agent uses a sophisticated multi-step AI workflow to analyze job advertisements and tailor your resume accordingly. The system ensures maximum relevance and impact while maintaining accuracy and professionalism through built-in safeguards against AI hallucination.
+Resume Agent uses a sophisticated multi-step AI workflow to analyze job advertisements and tailor your resume accordingly. The system provides a complete web-based interface with real-time progress tracking, integrated editing, and professional PDF generation. It ensures maximum relevance and impact while maintaining accuracy and professionalism through built-in safeguards against AI hallucination.
 
 ### What Makes Resume Agent Different
 
+- **Complete Web Interface**: Modern, user-friendly web application with progress tracking
 - **Anti-Hallucination Protection**: Prevents AI from inventing skills or experience not in your master CV
-- **Multi-Workflow Support**: Choose between automated, interactive, or manual editing workflows  
+- **Integrated Workflow**: Seamless experience from upload to final PDF download
 - **Australian English Support**: Built-in localization for Australian job market
 - **Professional Rendering**: Generates PDF, HTML, and other formats using RenderCV
 - **Truth-First Approach**: Emphasizes honesty over perfect job matching
@@ -49,9 +47,15 @@ Resume Agent uses a sophisticated multi-step AI workflow to analyze job advertis
 - **Fallback Mechanisms**: Uses original content if AI responses are invalid
 - **Truth Preservation**: Maintains honest representation of your background
 
-### 🚀 **Multiple Workflows**
-- **Standard Mode**: Fully automated resume tailoring
-- **YAML Editor**: Real-time editing with live PDF preview
+### 🌐 **Complete Web Interface**
+- **Modern UI**: Clean, intuitive web-based interface
+- **Progress Tracking**: Real-time updates during AI processing
+- **Integrated Editor**: Built-in YAML editor with syntax highlighting
+- **Live Preview**: Real-time PDF preview as you edit
+- **File Upload**: Drag-and-drop CV file upload
+- **Easy Downloads**: One-click download of YAML and PDF files
+- **Auto-save**: Automatic saving and rendering
+- **Responsive Design**: Works on desktop and mobile devices
 
 ### 🎨 **Professional Output**
 - **Multi-Format Support**: PDF, HTML, PNG, and Markdown outputs
@@ -70,14 +74,11 @@ pip install -r requirements.txt
 python setup_env.py
 # Edit .env file with your OpenAI API key
 
-# 3. Prepare your files
-cp master_CV_template.yaml master_CV.yaml
-cp job_advertisement_template.txt job_advertisement.txt
-# Edit both files with your information
+# 3. Start the web interface
+python start_ui.py               # Launch web UI
+# Or on Windows: start_ui.bat
 
-# 4. Run tailoring
-python run.py                    # Standard mode
-python simple_yaml_editor.py     # Manual editing
+# 4. Open your browser and go to http://localhost:5000
 ```
 
 ## Installation
@@ -126,54 +127,48 @@ DEBUG=false
 
 ## Usage
 
-### Standard Workflow
+### Web Interface (Complete Workflow)
 
-**Best for**: Quick, fully automated resume tailoring
+Resume Agent provides a comprehensive web-based interface for the complete resume tailoring workflow.
 
-1. **Prepare your master resume**:
+1. **Launch the web interface**:
    ```bash
-   cp master_CV_template.yaml master_CV.yaml
-   # Edit master_CV.yaml with your complete professional information
+   # Quick start
+   python start_ui.py
+   
+   # Or on Windows
+   start_ui.bat
+   
+   # Or directly
+   python resume_agent_ui.py
    ```
 
-2. **Add the job advertisement**:
-   ```bash
-   cp job_advertisement_template.txt job_advertisement.txt
-   # Edit job_advertisement.txt with the actual job posting
-   ```
+2. **Open your browser**:
+   - Go to: `http://localhost:5000`
 
-3. **Run the tailoring process**:
-   ```bash
-   python run.py
-   ```
+3. **Complete the workflow**:
+   - **Step 1**: Upload your master CV (YAML format) or paste it directly
+   - **Step 2**: Paste the job advertisement text
+   - **Step 3**: Click "Process with AI" and monitor real-time progress
+   - **Step 4**: Make final edits using the integrated YAML editor
+   - **Step 5**: Download your tailored resume (YAML and PDF)
 
-4. **Review outputs**:
-   - `working_CV.yaml`: Your tailored resume in YAML format
-   - `rendercv_output/`: Rendered files (PDF, HTML, PNG, Markdown)
+**Web Interface Features**:
+- 🌐 **Modern Interface**: Clean, intuitive web-based UI
+- 📊 **Progress Tracking**: Real-time updates during AI processing
+- 📝 **Integrated Editor**: Built-in YAML editor with syntax highlighting
+- 👁️ **Live Preview**: Real-time PDF preview as you edit
+- 📁 **File Upload**: Drag-and-drop CV file upload
+- 💾 **Easy Downloads**: One-click download of YAML and PDF files
+- 🔄 **Auto-save**: Automatic saving and rendering
+- 📱 **Responsive**: Works on desktop and mobile devices
 
-
-
-### YAML Editor
-
-**Best for**: Manual fine-tuning, real-time editing, or working without AI
-
-```bash
-# Start the editor
-python simple_yaml_editor.py
-
-# Alternative launchers
-python start_simple_editor.py      # Auto-setup version
-start_simple_editor.bat           # Windows double-click
-```
-
-**Editor Features**:
-- 🖥️ **Split-screen interface**: YAML editor + live PDF preview
-- ⚡ **Real-time updates**: PDF refreshes as you type
-- 💾 **Auto-save**: Changes saved automatically after 1.5 seconds
-- 🎨 **Syntax highlighting**: Full YAML syntax support
-- 🌙 **Dark theme**: Comfortable editing experience
-
-Access at: `http://localhost:5000`
+**Workflow Steps**:
+1. **Upload Master CV**: Either upload a YAML file or use the provided template
+2. **Add Job Advertisement**: Paste the complete job posting text
+3. **AI Processing**: Watch real-time progress as AI analyzes and tailors your resume
+4. **Edit & Refine**: Use the integrated editor to make final adjustments
+5. **Download Results**: Get both YAML and PDF versions of your tailored resume
 
 ## Configuration
 
@@ -207,7 +202,6 @@ AUSTRALIAN_ENGLISH=true
 ### Customization Options
 
 - **Node Logic**: Modify tailoring rules in `nodes/` directory
-- **Workflow Sequence**: Adjust processing order in `run.py`
 - **Templates**: Customize `master_CV_template.yaml` structure
 - **Rendering**: Configure RenderCV themes and formats
 
@@ -223,13 +217,11 @@ Resume_Agent/
 │   ├── validate_yaml.py        # YAML validation
 │   └── json_utils.py           # Utility functions
 ├── 📁 utils/                    # Shared utilities
-
 │   └── text_utils.py           # Text processing utilities
 ├── 📁 markdown/                 # RenderCV templates
 ├── 📁 rendercv_output/          # Generated CV files
-├── 🐍 run.py                   # Standard workflow entry point
-
-├── 🐍 simple_yaml_editor.py    # YAML editor with live preview
+├── 🌐 resume_agent_ui.py       # Web interface application
+├── 🐍 start_ui.py              # Web UI launcher
 ├── 🐍 state.py                 # State management
 ├── 📋 requirements.txt         # Python dependencies
 └── 📄 README.md               # This documentation
@@ -239,16 +231,17 @@ Resume_Agent/
 
 ```mermaid
 graph TD
-    A[Master CV + Job Ad] --> B[Parse Job Ad]
-    B --> C[Reorder Sections]
-    C --> D[Update Summary]
-    D --> E[Tailor Experience]
-    E --> F[Tailor Projects]
-    F --> G[Tailor Education]
-    G --> H[Tailor Skills]
-    H --> I[Validate YAML]
-    I --> J[Render CV]
-    J --> K[PDF/HTML Output]
+    A[Web Interface] --> B[Upload CV + Job Ad]
+    B --> C[Parse Job Ad]
+    C --> D[Reorder Sections]
+    D --> E[Update Summary]
+    E --> F[Tailor Experience]
+    F --> G[Tailor Projects]
+    G --> H[Tailor Education]
+    H --> I[Tailor Skills]
+    I --> J[Validate YAML]
+    J --> K[Render CV]
+    K --> L[Download PDF/YAML]
 ```
 
 ## AI Safety & Accuracy
@@ -339,7 +332,17 @@ pip install "rendercv[full]"
 python -m rendercv render working_CV.yaml
 ```
 
+**Web Interface Issues**
+```bash
+# Check if port 5000 is available
+netstat -an | grep :5000
 
+# Try alternative port
+FLASK_RUN_PORT=5001 python start_ui.py
+
+# Check browser console for JavaScript errors
+# Access http://localhost:5000 and check developer tools
+```
 
 ### 🔍 Debug Mode
 
@@ -347,12 +350,10 @@ Enable detailed logging:
 
 ```bash
 # Method 1: Environment variable
-DEBUG=true python run.py
+DEBUG=true python start_ui.py
 
-# Method 2: Command line logging
-python -u run.py 2>&1 | tee tailoring.log
-
-
+# Method 2: Check web interface logs
+# Monitor console output while using the web interface
 ```
 
 ### 📊 Validation Commands
@@ -365,9 +366,6 @@ cv = load_cv_from_file('master_CV.yaml')
 print(f'CV Name: {cv[\"cv\"][\"name\"]}')
 print(f'Sections: {list(cv[\"cv\"][\"sections\"].keys())}')
 "
-
-# Check job advertisement
-wc -w job_advertisement.txt  # Word count should be substantial
 
 # Verify output files
 ls -la working_CV.yaml rendercv_output/
@@ -384,15 +382,14 @@ def tailor_new_section(state: ResumeState) -> ResumeState:
     # Implementation here
     return state
 
-# 2. Add to workflow in run.py
-workflow.add_node("tailor_new_section", tailor_new_section)
-workflow.add_edge("previous_node", "tailor_new_section")
+# 2. Add to workflow in resume_agent_ui.py
+# Update the workflow setup to include your new node
 ```
 
-**Modify Workflow Sequence**
+**Modify Web Interface**
 ```python
-# Edit run.py setup_workflow() function
-# Reorder or add new edges between nodes
+# Edit resume_agent_ui.py
+# Add new routes, update templates, or modify the UI
 ```
 
 **Custom Validation Rules**
