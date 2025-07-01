@@ -1,0 +1,129 @@
+cv:
+  email: nigelnuique@gmail.com
+  location: Melbourne, Victoria
+  name: Nigel Nuique
+  phone: +61-435-395-191
+  sections:
+    certifications:
+    - Google Data Analytics Professional Certificate
+    - Azure Data Fundamentals DP-900
+    education:
+    - area: Data Science
+      degree: MS
+      end_date: 2024-12
+      highlights:
+      - Academic merit scholarship
+      - 'GPA: 3.5/4.0 (Distinction)'
+      - 'Capstone Project: Developed an NLP pipeline to harmonise medical concepts
+        using UMLSBERT and SciSpaCy. Used Plotly for interactive dashboards and visual
+        validation of mappings'
+      - 'Relevant Coursework: Algorithms and analysis, Programming Fundamentals, Practical
+        Data Science with Python, Advanced Programming for Data Science, Cloud Computing'
+      institution: RMIT University
+      location: Melbourne, Australia
+      start_date: 2023-02
+    - area: Electronics Engineering
+      degree: BS
+      end_date: 2019-05
+      highlights:
+      - Major in Instrumentation and Controls
+      - 'Thesis: Prepaid Solar System for off Grid Communities'
+      - 'Relevant Coursework: Computer Fundamentals & Programming, Numerical Methods,
+        Digital Electronics & Switching Theory, Microprocessor System, Advanced Computer
+        Programming'
+      institution: University of San Carlos
+      location: Cebu, Philippines
+      start_date: 2014-07
+    experience:
+    - company: Natural Velocity
+      end_date: present
+      highlights:
+      - Contributed to an early-stage AI and cybersecurity startup across strategy,
+        research, and planning
+      - Brought on for data science expertise, with the flexibility to support initiatives
+        across the organisation
+      location: Melbourne, AU (Hybrid)
+      position: Strategic Contributor
+      start_date: 2025-06
+    - company: Analog Devices
+      end_date: 2023-01
+      highlights:
+      - Developed test solutions and hardware for 4 new IC products, improving tester
+        availability by 15% by removing redundant tests
+      - Led qualifications for 10 products, releasing 40 setups
+      - Collaborated across QA, design, and production teams to ensure efficient operations
+      location: Cavite, PH
+      position: Test Development Engineer
+      start_date: 2021-10
+    - company: Maxim Integrated (acquired by Analog Devices)
+      end_date: 2021-10
+      highlights:
+      - developed hardware solutions for automated IC testing, resolving production
+        line issues in collaboration with product engineers
+      location: Cavite, PH
+      position: Associate Member of Technical Staff, Test Systems Development
+      start_date: 2020-01
+    - company: RMIT University
+      end_date: 2024-02
+      highlights:
+      - Conducted AV/IT audits across 14 buildings, resolving 37 technical issues
+        and updating 90+ support guides
+      - Ensured classrooms followed layout and cleanliness standards
+      location: Melbourne, AU
+      position: Transition Support Officer | Property Audit Assistant
+      start_date: 2023-07
+    professional_summary:
+    - Technical expert with a solid foundation in data science and electronics engineering,
+      now focusing on SaaS solutions. Proven track record in problem-solving, root
+      cause identification, and issue resolution, honed through hands-on project delivery
+      in various settings. Exceptional communication skills, customer-centric approach,
+      and ability to work collaboratively make me a strong fit for a level two technical
+      support role in a scaling SaaS workforce management environment.
+    projects:
+    - end_date: 2025-05
+      highlights: []
+      link: https://nigelnuique.com
+      name: Clinical Notes AI Agent
+      summary: Developed a LangGraph-based agent that extracts and validates tasks
+        from clinical notes, demonstrating problem-solving and technical implementation
+        skills.
+    - end_date: 2025-02
+      highlights: []
+      link: https://public.tableau.com/app/profile/nigel.ray.nuique/viz/Book1_17389035244010/Dashboard1
+      name: Melbourne Airbnb Tableau Dashboard
+      summary: Created a visual dashboard showing geospatial pricing trends in the
+        Melbourne Airbnb market, demonstrating data visualisation and analysis skills.
+    - end_date: 2024-09
+      highlights: []
+      link: https://nigelnuique.com/blog/running-shoe-geeks-analysis
+      name: Running Shoe Subreddit analysis
+      summary: Conducted an NLP analysis of shoe brand sentiment on r/runningshoegeeks,
+        demonstrating data analysis and problem-solving skills.
+    - end_date: 2023-12
+      highlights: []
+      link: https://github.com/nigelnuique/job_search_web_app
+      name: Job Search Web Application
+      summary: Built a Flask app with job search and job posting functionality, demonstrating
+        full-stack development and user experience skills.
+    skills:
+    - details: Jira, Confluence, Neo4j, Hadoop, Cursor, SendGrid, Twilio, Prompt Engineering,
+        Visual Basic, NumPy, LangGraph, SciSpaCy, R, pandas, C++, Jupyter, VSCode
+      label: Tools
+    - details: JavaScript
+      label: Web
+    - details: Google Cloud (BigQuery, Vertex AI), AWS (basic), Azure
+      label: Cloud
+    - details: Python, SQL, Flask, Git, HTML, CSS
+      label: Programming
+    - details: Tableau, PowerBI, Plotly, matplotlib, seaborn
+      label: Visualisation
+    - details: LangChain, scikit-learn, UMLSBERT, LLMs (OpenAI, HuggingFace)
+      label: AI & ML
+  social_networks:
+  - network: LinkedIn
+    username: nigelnuique
+  - network: GitHub
+    username: nigelnuique
+  website: https://nigelnuique.com
+design:
+  theme: engineeringresumes

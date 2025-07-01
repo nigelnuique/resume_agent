@@ -64,9 +64,16 @@ JOB_REQUIREMENTS = {{
    - Don't inflate experience in areas where they have limited professional background
    - Example: If someone has 3 years in one field + MS in another field, say "Professional transitioning to [new field]" NOT "3+ years in [new field]"
 
-4. **Structure the summary**
+4. **Structure the summary with varied openings**
    - 50-60 words, 2-3 sentences
-   - Lead with most relevant experience
+   - Use natural, varied sentence starters (avoid "Technical professional" or similar generic phrases)
+   - Examples of good openings:
+     * "Data scientist with experience in..."
+     * "Experienced in Python programming and..."
+     * "Skilled at building predictive models..."
+     * "Passionate about leveraging data to..."
+     * "Background in [specific field] with expertise in..."
+   - Lead with most relevant experience or skills
    - Include key skills that match job requirements
    - End with enthusiasm for the role
 
@@ -76,11 +83,13 @@ JOB_REQUIREMENTS = {{
 - Be honest about their background and transitions
 - Focus on transferable skills and genuine qualifications
 - Match the tone to the job requirements and company culture
+- AVOID generic phrases like "Technical professional", "Experienced professional", "Skilled professional"
+- Use specific, varied language that reflects the candidate's actual background
 
 ### Output (MUST be strict JSON):
 {{
   "tailored_summary": [
-    "A single paragraph (50-60 words) that flows naturally from the candidate's background to their relevant skills and enthusiasm for the role. This should be written as one continuous paragraph that will be displayed as a single block of text."
+    "A single paragraph (50-60 words) that flows naturally from the candidate's background to their relevant skills and enthusiasm for the role. Use varied, specific language and avoid generic openings."
   ],
   "changes_made": "Brief description of what was changed and why"
 }}
