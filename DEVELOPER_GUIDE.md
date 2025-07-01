@@ -83,9 +83,8 @@ resume_agent/
 ├── 📁 markdown/               # RenderCV template files
 ├── 📁 rendercv_output/        # Generated output files
 ├── 🐍 state.py               # State management and types
-├── 🐍 run.py                 # Standard workflow entry point
-
-├── 🐍 simple_yaml_editor.py  # Web-based YAML editor
+├── 🌐 resume_agent_ui.py     # Web interface application
+├── 🐍 start_ui.py            # Web UI launcher
 └── 🐍 setup_env.py           # Environment setup utilities
 ```
 
@@ -94,8 +93,8 @@ resume_agent/
 | File | Purpose | Dependencies |
 |------|---------|--------------|
 | `state.py` | State management and type definitions | PyYAML, typing |
-| `run.py` | Main workflow orchestration | LangGraph, all nodes |
-
+| `resume_agent_ui.py` | Web interface and workflow orchestration | Flask, LangGraph, all nodes |
+| `start_ui.py` | Web UI launcher with setup | Flask |
 | `nodes/*.py` | Individual processing nodes | OpenAI, state |
 | `utils/*.py` | Shared utility functions | Various |
 
@@ -189,18 +188,20 @@ def setup_workflow() -> StateGraph:
 ### Workflow Execution
 
 ```python
-# Standard execution
-def main():
+# Web interface execution
+def run_workflow_via_web():
+    """Execute workflow through web interface"""
     state = load_initial_data()
     workflow = setup_workflow()
     app = workflow.compile()
     
-    # Execute workflow
+    # Execute workflow with progress tracking
     result = app.invoke(state)
     
     # Handle output
     save_working_cv(result)
     render_cv()
+    return result
 ```
 
 
@@ -490,7 +491,9 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-CMD ["python", "run.py"]
+EXPOSE 5000
+
+CMD ["python", "start_ui.py"]
 ```
 
 ### Production Considerations
@@ -533,7 +536,7 @@ CMD ["python", "run.py"]
    python -m flake8 .
    
    # Test your changes
-   python run.py
+   python start_ui.py
    ```
 
 5. **Submit Pull Request**
@@ -566,7 +569,7 @@ CMD ["python", "run.py"]
 
 2. **Update Workflow**
    ```python
-   # run.py
+   # resume_agent_ui.py
    from nodes.my_new_node import my_new_node
    
    def setup_workflow():

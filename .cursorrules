@@ -83,7 +83,8 @@ Resume_Agent/
 ├── utils/           # Utility functions
 ├── markdown/        # Template files
 ├── rendercv_output/ # Generated CV files
-├── run.py          # Main entry point
+├── resume_agent_ui.py # Web interface application
+├── start_ui.py     # Web UI launcher
 ├── state.py        # State management
 └── requirements.txt # Dependencies
 ```
