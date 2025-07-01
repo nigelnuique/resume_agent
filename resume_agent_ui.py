@@ -445,6 +445,63 @@ UI_HTML = """
             border: 1px solid #404040;
         }
         
+        .workflow-explanation {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .workflow-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            padding: 15px;
+            background: #1e1e1e;
+            border-radius: 6px;
+            border: 1px solid #404040;
+        }
+        
+        .step-icon {
+            font-size: 24px;
+            min-width: 40px;
+            text-align: center;
+        }
+        
+        .step-content h3 {
+            color: #4fc3f7;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .step-content p {
+            color: #ccc;
+            font-size: 14px;
+            line-height: 1.5;
+            margin: 0;
+        }
+        
+        .workflow-tip {
+            background: #2a4a2a;
+            border: 1px solid #4a8a4a;
+            border-radius: 6px;
+            padding: 15px;
+            color: #e8f5e8;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            .workflow-step {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .step-icon {
+                min-width: auto;
+            }
+        }
+        
         .section-title {
             font-size: 20px;
             font-weight: 600;
@@ -668,16 +725,49 @@ UI_HTML = """
 <body>
     <div class="header">
         <h1>🚀 Resume Agent</h1>
-        <p>AI-Powered Resume Tailoring with Manual Editing</p>
     </div>
     
     <div class="container">
+        <!-- How It Works Section -->
+        <div class="workflow-section">
+            <h2 class="section-title">📖 How Resume Agent Works</h2>
+            <div class="workflow-explanation">
+                <div class="workflow-step">
+                    <div class="step-icon">1️⃣</div>
+                    <div class="step-content">
+                        <h3>Start with Your Master CV</h3>
+                        <p>Upload a comprehensive YAML CV containing <strong>all</strong> your experiences, skills, projects, and achievements. This serves as your complete professional profile that the AI will draw from.</p>
+                    </div>
+                </div>
+                <div class="workflow-step">
+                    <div class="step-icon">2️⃣</div>
+                    <div class="step-content">
+                        <h3>AI Tailors Your Resume</h3>
+                        <p>Provide the job advertisement, and our AI will analyze the requirements and automatically tailor your master CV - selecting relevant experiences, optimizing descriptions, and reordering sections to match the role.</p>
+                    </div>
+                </div>
+                <div class="workflow-step">
+                    <div class="step-icon">3️⃣</div>
+                    <div class="step-content">
+                        <h3>Human Final Touch</h3>
+                        <p>Review the AI-tailored version and make final edits as needed. You have full control to adjust wording, add specific details, or modify the content to perfectly match your style and the opportunity.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="workflow-tip">
+                💡 <strong>Pro Tip:</strong> Keep your master CV comprehensive and up-to-date. The more complete information you provide, the better the AI can tailor each resume for specific opportunities.
+            </div>
+        </div>
+        
         <!-- Input Section -->
         <div class="workflow-section">
             <h2 class="section-title">📋 Step 1: Input Your Data</h2>
             
             <div class="input-group">
                 <label for="master-cv">Master CV (YAML format):</label>
+                <div style="font-size: 14px; color: #999; margin-bottom: 10px;">
+                    💡 Don't have your own YAML file? Try uploading the <strong>master_CV_template.yaml</strong> file from the project folder as a starting point.
+                </div>
                 <div class="file-upload">
                     <input type="file" id="cv-file" accept=".yaml,.yml" />
                     <button class="btn btn-secondary">Upload CV File</button>
@@ -711,9 +801,6 @@ UI_HTML = """
             <div class="editor-header">
                 <h2 class="section-title">✏️ Step 2: Final Editing</h2>
                 <div style="display: flex; gap: 15px; align-items: center;">
-                    <div class="performance-info" style="font-size: 12px; color: #888;">
-                        ⚡ Real-time rendering • Smart change detection
-                    </div>
                     <div class="editor-status" id="editor-status">Ready</div>
                 </div>
             </div>
@@ -980,6 +1067,14 @@ UI_HTML = """
             !document.getElementById('yaml-editor').value.includes('No working CV available')) {
             document.getElementById('editor-section').style.display = 'block';
             initializeEditor();
+            
+            // Automatically render the preview since we have existing content
+            setTimeout(() => {
+                if (editor) {
+                    setEditorStatus('Rendering existing CV...', 'info');
+                    saveAndRender();
+                }
+            }, 500); // Small delay to ensure editor is fully initialized
         }
     </script>
 </body>
