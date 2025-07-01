@@ -10,7 +10,10 @@ import copy
 import threading
 import tempfile
 import subprocess
-from datetime import datetime
+import hashlib
+import asyncio
+import shutil
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import cast
 from flask import Flask, render_template_string, request, jsonify, send_file, Response
@@ -34,12 +37,70 @@ class ResumeAgentUI:
         self.job_ad_file = "job_advertisement.txt"
         self.current_render = None
         self.workflow_running = False
+        
+        # Performance optimization attributes
+        self.last_render_content_hash = None
+        self.render_cache = {}  # content_hash -> render_result
+        self.render_queue = []
+        self.render_lock = threading.Lock()
+        self.is_rendering = False
+        
         self.ensure_directories()
+        self.cleanup_old_renders()
     
     def ensure_directories(self):
         """Ensure required directories exist."""
         os.makedirs(self.temp_dir, exist_ok=True)
         os.makedirs("rendercv_output", exist_ok=True)
+    
+    def cleanup_old_renders(self):
+        """Clean up old render directories to free disk space."""
+        try:
+            if not os.path.exists(self.temp_dir):
+                return
+            
+            # Keep only the last 5 renders
+            render_dirs = []
+            for item in os.listdir(self.temp_dir):
+                item_path = os.path.join(self.temp_dir, item)
+                if os.path.isdir(item_path) and item.startswith('render_'):
+                    render_dirs.append((item_path, os.path.getctime(item_path)))
+            
+            # Sort by creation time, oldest first
+            render_dirs.sort(key=lambda x: x[1])
+            
+            # Remove all but the 5 most recent
+            for item_path, _ in render_dirs[:-5]:
+                try:
+                    shutil.rmtree(item_path)
+                    print(f"🧹 Cleaned up old render: {item_path}")
+                except Exception as e:
+                    print(f"⚠️ Could not remove {item_path}: {e}")
+                    
+        except Exception as e:
+            print(f"⚠️ Cleanup error: {e}")
+    
+    def get_content_hash(self, content: str) -> str:
+        """Generate a hash for content to detect changes."""
+        return hashlib.md5(content.encode('utf-8')).hexdigest()
+    
+    def should_render(self, yaml_content: str) -> bool:
+        """Check if content has changed enough to warrant a new render."""
+        content_hash = self.get_content_hash(yaml_content)
+        
+        # Check if content is the same as last render
+        if self.last_render_content_hash == content_hash:
+            return False
+            
+        # Check if we have this render cached
+        if content_hash in self.render_cache:
+            # Use cached render
+            cached_result = self.render_cache[content_hash]
+            self.current_render = cached_result
+            self.last_render_content_hash = content_hash
+            return False
+            
+        return True
     
     def save_master_cv(self, yaml_content):
         """Save master CV YAML content."""
@@ -219,44 +280,76 @@ class ResumeAgentUI:
             return {"error": f"Error saving working CV: {str(e)}"}
     
     def render_pdf(self, yaml_content):
-        """Render CV to PDF using RenderCV."""
+        """Render CV to PDF using RenderCV with performance optimizations."""
         try:
-            # Create unique temp directory
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-            temp_render_dir = os.path.join(self.temp_dir, f"render_{timestamp}")
-            os.makedirs(temp_render_dir, exist_ok=True)
-            
-            # Create temp YAML file
-            temp_yaml = os.path.join(temp_render_dir, "temp_cv.yaml")
-            with open(temp_yaml, 'w', encoding='utf-8') as file:
-                file.write(yaml_content)
-            
-            # Use RenderCV to render PDF
-            pdf_path = os.path.join(temp_render_dir, "cv.pdf")
-            cmd = ["python", "-m", "rendercv", "render", temp_yaml, "--pdf-path", pdf_path]
-            
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-            
-            if result.returncode == 0 and os.path.exists(pdf_path):
-                self.current_render = {
-                    "pdf_path": pdf_path,
-                    "timestamp": timestamp,
-                    "temp_dir": temp_render_dir
-                }
+            # Check if we need to render at all
+            if not self.should_render(yaml_content):
+                if self.current_render:
+                    return {
+                        "success": True,
+                        "pdf_url": f"/pdf/{self.current_render['timestamp']}",
+                        "timestamp": self.current_render['timestamp'],
+                        "cached": True
+                    }
                 
-                return {
-                    "success": True,
-                    "pdf_url": f"/pdf/{timestamp}",
-                    "timestamp": timestamp
-                }
-            else:
-                return {
-                    "error": f"RenderCV failed: {result.stderr or 'Unknown error'}"
-                }
+            # Prevent concurrent renders
+            with self.render_lock:
+                if self.is_rendering:
+                    return {"error": "Another render is in progress, please wait..."}
+                
+                self.is_rendering = True
+            
+            try:
+                # Create unique temp directory
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                temp_render_dir = os.path.join(self.temp_dir, f"render_{timestamp}")
+                os.makedirs(temp_render_dir, exist_ok=True)
+                
+                # Create temp YAML file
+                temp_yaml = os.path.join(temp_render_dir, "temp_cv.yaml")
+                with open(temp_yaml, 'w', encoding='utf-8') as file:
+                    file.write(yaml_content)
+                
+                # Use RenderCV to render PDF
+                pdf_path = os.path.join(temp_render_dir, "cv.pdf")
+                cmd = ["python", "-m", "rendercv", "render", temp_yaml, "--pdf-path", pdf_path]
+                
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+                
+                if result.returncode == 0 and os.path.exists(pdf_path):
+                    render_result = {
+                        "pdf_path": pdf_path,
+                        "timestamp": timestamp,
+                        "temp_dir": temp_render_dir
+                    }
+                    
+                    # Cache the result
+                    content_hash = self.get_content_hash(yaml_content)
+                    self.render_cache[content_hash] = render_result
+                    self.last_render_content_hash = content_hash
+                    self.current_render = render_result
+                    
+                    # Clean up old renders after successful render
+                    self.cleanup_old_renders()
+                    
+                    return {
+                        "success": True,
+                        "pdf_url": f"/pdf/{timestamp}",
+                        "timestamp": timestamp
+                    }
+                else:
+                    return {
+                        "error": f"RenderCV failed: {result.stderr or 'Unknown error'}"
+                    }
+                    
+            finally:
+                self.is_rendering = False
                 
         except subprocess.TimeoutExpired:
-            return {"error": "Rendering timed out"}
+            self.is_rendering = False
+            return {"error": "Rendering timed out (reduced to 10s)"}
         except Exception as e:
+            self.is_rendering = False
             return {"error": f"Render error: {str(e)}"}
 
 ui = ResumeAgentUI()
@@ -585,7 +678,12 @@ UI_HTML = """
         <div class="editor-section" id="editor-section">
             <div class="editor-header">
                 <h2 class="section-title">✏️ Step 2: Final Editing</h2>
-                <div class="editor-status" id="editor-status">Ready</div>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <div class="performance-info" style="font-size: 12px; color: #888;">
+                        ⚡ Real-time rendering • Smart change detection
+                    </div>
+                    <div class="editor-status" id="editor-status">Ready</div>
+                </div>
             </div>
             
             <div class="editor-main">
@@ -629,14 +727,14 @@ UI_HTML = """
                     matchBrackets: true
                 });
                 
-                // Auto-save with debouncing
+                // Auto-save with smart debouncing for real-time rendering
                 editor.on('change', function() {
                     setEditorStatus('Editing...', 'info');
                     
                     clearTimeout(saveTimeout);
                     saveTimeout = setTimeout(() => {
                         saveAndRender();
-                    }, 1500);
+                    }, 1500); // Optimized for real-time with smart caching
                 });
             }
         }
@@ -783,8 +881,7 @@ UI_HTML = """
             if (isRendering || !editor) return;
             
             isRendering = true;
-            setEditorStatus('Rendering...', 'info');
-            showPreviewMessage('🔄 Rendering CV...');
+            setEditorStatus('Checking for changes...', 'info');
             
             const yamlContent = editor.getValue();
             
@@ -798,21 +895,35 @@ UI_HTML = """
                 isRendering = false;
                 
                 if (data.success) {
-                    setEditorStatus('Rendered successfully', 'success');
                     if (data.render && data.render.success) {
+                        // Check if result was cached (no changes detected)
+                        if (data.render.cached) {
+                            setEditorStatus('✅ No changes detected', 'success');
+                        } else {
+                            setEditorStatus('✅ Changes rendered', 'success');
+                        }
                         showPDF(data.render.pdf_url);
                     } else if (data.render && data.render.error) {
-                        setEditorStatus('Render error', 'error');
-                        showPreviewMessage('❌ ' + data.render.error);
+                        if (data.render.error.includes('in progress')) {
+                            setEditorStatus('⏳ Rendering...', 'info');
+                            showPreviewMessage('🔄 Rendering changes...');
+                            // Retry after a short delay
+                            setTimeout(() => {
+                                if (!isRendering) saveAndRender();
+                            }, 1500);
+                        } else {
+                            setEditorStatus('❌ Render error', 'error');
+                            showPreviewMessage('❌ ' + data.render.error);
+                        }
                     }
                 } else {
-                    setEditorStatus('Error: ' + data.error, 'error');
+                    setEditorStatus('❌ Save error: ' + data.error, 'error');
                     showPreviewMessage('❌ ' + data.error);
                 }
             })
             .catch(error => {
                 isRendering = false;
-                setEditorStatus('Network error', 'error');
+                setEditorStatus('❌ Network error', 'error');
                 showPreviewMessage('❌ Network error: ' + error.message);
             });
         }
@@ -879,7 +990,7 @@ def load_working_cv():
 
 @app.route('/api/save-working-cv', methods=['POST'])
 def save_working_cv():
-    """Save working CV and render PDF."""
+    """Save working CV and render PDF automatically when changes are detected."""
     data = request.get_json()
     yaml_content = data.get('yaml', '')
     
@@ -888,7 +999,7 @@ def save_working_cv():
     if save_result.get('error'):
         return jsonify(save_result)
     
-    # Render PDF
+    # Automatically render PDF (smart caching will handle duplicates)
     render_result = ui.render_pdf(yaml_content)
     
     return jsonify({
