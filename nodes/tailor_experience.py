@@ -4,6 +4,13 @@ from openai import OpenAI
 from state import ResumeState
 from .json_utils import safe_json_parse, create_fallback_response
 
+# Import utility for Australian English instruction
+try:
+    from utils import get_australian_english_instruction
+    UTILS_AVAILABLE = True
+except ImportError:
+    UTILS_AVAILABLE = False
+
 def tailor_experience(state: ResumeState) -> ResumeState:
     """
     Tailor experience section by reordering and emphasizing relevant experience.
@@ -21,27 +28,12 @@ def tailor_experience(state: ResumeState) -> ResumeState:
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         job_requirements = state['job_requirements']
         
-        # Check if this is a technical/senior role that should filter out irrelevant positions
-        is_technical_role = any(tech in str(job_requirements).lower() for tech in [
-            'engineering', 'developer', 'data', 'analytics', 'ml', 'machine learning', 
-            'python', 'sql', 'technical', 'software', 'senior'
-        ])
-        
-        filter_instruction = ""
-        if is_technical_role:
-            filter_instruction = """
-        FILTERING INSTRUCTION:
-        For technical/senior roles, EXCLUDE the following types of irrelevant positions from the final experience list:
-        - Retail/service positions (Personal Shopper, Event Staff, etc.)
-        - Basic administrative roles (Property Audit Assistant, etc.) 
-        - Entry-level service jobs that don't demonstrate technical skills
-        Keep only positions that demonstrate technical competence, leadership, or directly relevant experience.
-        Aim for 3-5 most relevant positions maximum.
-        """
+        # Get Australian English instruction if enabled
+        au_english_instruction = get_australian_english_instruction() if UTILS_AVAILABLE else ""
         
         prompt = f"""
 You are optimising the *Experience* section of a MASTER résumé
-to create a *Targeted Résumé* for ONE specific job.
+to create a *Targeted Résumé* for ONE specific job.{au_english_instruction}
 
 ### Context
 • The master CV covers the candidate's actual work experience
@@ -103,13 +95,13 @@ JOB_REQUIREMENTS = {{
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are an expert resume writer. Optimize experience sections while maintaining factual accuracy. For technical roles, prioritize relevant experience and filter out irrelevant service positions."},
+                {"role": "system", "content": "You are an expert resume writer. Optimize the experience section while maintaining factual accuracy and removing obviously irrelevant positions."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3
         )
         
-        result = safe_json_parse(response.choices[0].message.content, "tailor_experience")
+        result = safe_json_parse(response.choices[0].message.content or "", "tailor_experience")
         
         if result is None:
             print("   ⚠️ Could not parse experience optimization - keeping original")

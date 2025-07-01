@@ -29,31 +29,44 @@ def parse_job_ad(state: ResumeState) -> ResumeState:
         - "industry_domain": the industry or business domain
         - "company_culture": any cultural aspects or values mentioned
         - "experience_level": required years of experience
+        - "certifications_required": list of any certifications or professional qualifications mentioned
+        - "technical_expertise": list of technical skills and expertise areas mentioned
+        - "professional_qualifications": list of professional qualifications, licenses, or credentials mentioned
+
+        IMPORTANT: Pay special attention to:
+        - Any mention of "technical and professional expertise"
+        - Certification requirements or preferences
+        - Professional qualifications or licenses
+        - Technical skills and competencies
+        - Partner enablement or training requirements
         """
         
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are an expert at analyzing job advertisements. Extract specific, actionable requirements for resume tailoring."},
+                {"role": "system", "content": "You are an expert at analyzing job advertisements. Extract specific, actionable requirements for resume tailoring, with special focus on technical expertise and professional qualifications."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.1
         )
         
-        job_requirements = safe_json_parse(response.choices[0].message.content, "parse_job_ad")
+        job_requirements = safe_json_parse(response.choices[0].message.content or "", "parse_job_ad")
         
         if job_requirements is None:
-            # Fallback with basic parsing
+            # Fallback with empty values to avoid hard-coded defaults
             print("   ⚠️ Using fallback job parsing")
             job_requirements = create_fallback_response("parse_job_ad", {
-                'essential_requirements': ['Python', 'SQL', 'Data Analysis'],
-                'preferred_requirements': ['Machine Learning', 'Cloud Technologies'],
-                'key_technologies': ['Python', 'SQL', 'Git'],
-                'soft_skills': ['Communication', 'Problem Solving'],
-                'role_focus': ['Data Engineering', 'Analytics'],
-                'industry_domain': 'Tech',
-                'company_culture': 'Collaborative',
-                'experience_level': '2+ years'
+                'essential_requirements': [],
+                'preferred_requirements': [],
+                'key_technologies': [],
+                'soft_skills': [],
+                'role_focus': [],
+                'industry_domain': '',
+                'company_culture': '',
+                'experience_level': '',
+                'certifications_required': [],
+                'technical_expertise': [],
+                'professional_qualifications': []
             })
         
         state['job_requirements'] = job_requirements
@@ -62,6 +75,8 @@ def parse_job_ad(state: ResumeState) -> ResumeState:
         print("✅ Job advertisement parsed successfully")
         print(f"   - Found {len(job_requirements.get('essential_requirements', []))} essential requirements")
         print(f"   - Found {len(job_requirements.get('key_technologies', []))} key technologies")
+        print(f"   - Found {len(job_requirements.get('certifications_required', []))} certification requirements")
+        print(f"   - Found {len(job_requirements.get('technical_expertise', []))} technical expertise areas")
         print(f"   - Industry focus: {job_requirements.get('industry_domain', 'Not specified')}")
         
     except Exception as e:
@@ -77,7 +92,10 @@ def parse_job_ad(state: ResumeState) -> ResumeState:
             'role_focus': [],
             'industry_domain': 'General',
             'company_culture': '',
-            'experience_level': ''
+            'experience_level': '',
+            'certifications_required': [],
+            'technical_expertise': [],
+            'professional_qualifications': []
         }
         state['job_parsed'] = True
     

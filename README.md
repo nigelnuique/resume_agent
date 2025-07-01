@@ -12,34 +12,24 @@ Resume Agent uses a multi-step AI workflow to analyze job advertisements and tai
 - **Section Reordering**: Prioritizes resume sections based on job requirements
 - **Content Tailoring**: Customizes professional summary, experience, projects, education, and skills
 - **Cross-Reference Validation**: Ensures consistency and eliminates unsupported claims
-- **Grammar & Tone Optimization**: Polishes language to match company culture
+- **Anti-Hallucination Safeguards**: Prevents AI from inventing skills or experience not present in the master CV
+- **Optimized AI Prompts**: Streamlined, reusable prompts that work for any candidate background
 - **Australian English Conversion**: Standardizes spelling for Australian job market
 - **YAML Validation**: Ensures RenderCV compatibility
 - **Automated Rendering**: Generates PDF, HTML, and other formats using RenderCV
+- **Interactive Workflow**: Step-by-step execution with user control and CV rendering after each step
 
 ## System Architecture
 
 ```
-Resume Agent/
-├── nodes/                    # Processing nodes
-│   ├── parse_job_ad.py      # Job advertisement analysis
-│   ├── reorder_sections.py  # Section prioritization
-│   ├── update_summary.py    # Professional summary tailoring
-│   ├── tailor_experience.py # Experience section optimization
-│   ├── tailor_projects.py   # Projects section customization
-│   ├── tailor_education.py  # Education section tailoring
-│   ├── tailor_skills.py     # Skills section optimization
-│   ├── cross_reference_check.py    # Consistency validation
-│   ├── resolve_inconsistencies.py # Automatic inconsistency resolution
-│   ├── grammar_tone_check.py       # Language optimization
-│   ├── convert_au_english.py    # Spelling standardization
-│   └── validate_yaml.py         # RenderCV compatibility check
-├── state.py                 # Shared state management
-├── run.py                   # Main orchestration script
-├── master_CV.yaml          # Your master resume
-├── job_advertisement.txt   # Target job posting
-├── working_CV.yaml        # Generated tailored resume
-└── rendercv_output/       # Rendered resume files
+Resume_Agent/
+├── nodes/           # Workflow nodes (LangGraph)
+├── utils/           # Utility functions
+├── markdown/        # Template files
+├── rendercv_output/ # Generated CV files
+├── run.py          # Main entry point
+├── state.py        # State management
+└── requirements.txt # Dependencies
 ```
 
 ## Installation
@@ -59,6 +49,11 @@ Resume Agent/
 2. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
+   ```
+   
+   **Note:** The requirements now specify `rendercv[full]` to ensure all rendering features are available. If you install manually, use:
+   ```bash
+   pip install "rendercv[full]"
    ```
 
 3. **Set up OpenAI API key**:
@@ -80,6 +75,7 @@ Resume Agent/
 
 ## Usage
 
+### Standard Workflow
 1. **Prepare your master resume**:
    ```bash
    # Copy the template and customize it with your information
@@ -106,20 +102,46 @@ Resume Agent/
    - `working_CV.yaml`: Your tailored resume in YAML format
    - `rendercv_output/`: Rendered files (PDF, HTML, etc.)
 
+### Interactive Workflow
+For step-by-step control and review:
+
+1. **Prepare files as above**
+
+2. **Run the interactive workflow**:
+   ```bash
+   # Option 1: Direct Python execution
+   python run_interactive.py
+   
+   # Option 2: Windows batch file
+   run_interactive.bat
+   
+   # Option 3: Unix/Linux shell script
+   chmod +x run_interactive.sh
+   ./run_interactive.sh
+   ```
+
+3. **Review and control each step**:
+   - After each node completes, the CV is automatically rendered
+   - You can view the rendered CV in `rendercv_output/`
+   - Choose whether to proceed to the next step or stop
+   - Useful for debugging or fine-tuning the tailoring process
+
+**Interactive Workflow Benefits:**
+- Review changes after each tailoring step
+- Stop at any point if you're satisfied with the results
+- Debug issues by examining intermediate states
+- Control the tailoring process for sensitive applications
+
 ## Workflow Steps
 
 1. **Parse Job Advertisement**: Extracts requirements, technologies, and cultural indicators
-2. **Reorder Sections**: Prioritizes sections based on job emphasis
+2. **Reorder Sections**: Prioritizes sections based on job emphasis and removes irrelevant sections
 3. **Update Summary**: Tailors professional summary to match role
 4. **Tailor Experience**: Reorders and optimizes experience entries
 5. **Tailor Projects**: Emphasizes relevant project experience
 6. **Tailor Education**: Highlights relevant academic achievements
 7. **Tailor Skills**: Matches skill terminology and removes irrelevant items
-8. **Cross-Reference Check**: Validates consistency across sections
-9. **Resolve Inconsistencies**: Automatically fixes unsupported claims and inconsistencies
-10. **Grammar & Tone Check**: Polishes language and tone
-11. **Convert to Australian English**: Standardizes spelling
-12. **Validate YAML**: Ensures RenderCV compatibility
+8. **Validate YAML**: Ensures RenderCV compatibility
 
 ## Configuration
 
@@ -130,12 +152,28 @@ Create a `.env` file in the project root with the following variables:
 - `OPENAI_MODEL`: Optional, defaults to 'gpt-4'
 - `OPENAI_TEMPERATURE`: Optional, controls AI response randomness (0.0-1.0)
 - `DEBUG`: Optional, enables debug mode (true/false)
+- `AUSTRALIAN_ENGLISH`: Optional, use Australian English spelling throughout (true/false, default: false)
 
 **Quick Setup:**
 ```bash
 python setup_env.py  # Creates .env from template
 # Then edit .env and add your actual API key
 ```
+
+### Australian English Toggle
+Enable Australian English spelling throughout the resume tailoring process:
+```bash
+# In your .env file:
+AUSTRALIAN_ENGLISH=true
+```
+
+This will automatically convert spellings like:
+- "color" → "colour"
+- "center" → "centre" 
+- "organization" → "organisation"
+- "realize" → "realise"
+
+The toggle affects all AI-generated content, ensuring consistency throughout the tailored resume.
 
 ### Customization Options
 - Modify node logic in `nodes/` directory for custom tailoring rules
@@ -149,6 +187,27 @@ python setup_env.py  # Creates .env from template
 3. **Review Generated Content**: Always review AI-generated changes before submission
 4. **Maintain Truthfulness**: The system emphasizes accuracy over embellishment
 5. **Regular Updates**: Keep your master resume current with new experiences
+
+## AI Safety and Accuracy
+
+The system includes multiple safeguards to ensure truthful and accurate resume tailoring:
+
+### Anti-Hallucination Protection
+- **Skills Validation**: AI can only mention skills explicitly listed in your master CV
+- **Experience Verification**: No professional experience is invented or inflated
+- **Cross-Reference Checks**: Every claim is validated against your actual background
+- **Fallback Mechanisms**: If AI responses are invalid, the system uses your original content
+
+### Truthfulness Emphasis
+- **Honest Transitions**: Career changes are presented truthfully (e.g., "Professional transitioning to [field]")
+- **Experience Level Accuracy**: Distinguishes between professional work and academic/project experience
+- **No Skill Invention**: Technical skills are only mentioned if they exist in your skills section
+- **Background Preservation**: Your genuine strengths are emphasized rather than trying to match every job requirement
+
+### Prompt Optimization
+- **Reusable Design**: Prompts work for any candidate background, not tailored to specific users
+- **Consistent Quality**: Streamlined prompts reduce redundancy while maintaining effectiveness
+- **General Applicability**: System adapts to various industries and career levels
 
 ## Troubleshooting
 
@@ -165,7 +224,8 @@ python setup_env.py  # Creates .env from template
    - Validate YAML syntax
 
 3. **RenderCV Rendering Issues**:
-   - Verify RenderCV installation: `rendercv --version`
+   - Verify RenderCV installation: `python -m rendercv --version` (use this instead of `rendercv --version` if the command is not found)
+   - If you see a message about partial installation, run: `pip install "rendercv[full]"`
    - Check for unsupported characters or formatting
    - Review generated working_CV.yaml for issues
 

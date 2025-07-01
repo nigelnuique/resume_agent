@@ -39,6 +39,21 @@ def safe_json_parse(content: str, context: str = "unknown") -> Optional[Dict[str
         # Remove trailing commas before closing brackets/braces
         fixed_content = re.sub(r',(\s*[}\]])', r'\1', fixed_content)
         
+        # Fix unescaped quotes in string values
+        # This is a more sophisticated approach to handle quotes within strings
+        def fix_quotes_in_strings(text):
+            # Find all string values and escape internal quotes
+            pattern = r'"([^"]*(?:\\.[^"]*)*)"'
+            def replace_string(match):
+                string_content = match.group(1)
+                # Escape any unescaped quotes within the string
+                string_content = string_content.replace('"', '\\"')
+                return f'"{string_content}"'
+            
+            return re.sub(pattern, replace_string, text)
+        
+        fixed_content = fix_quotes_in_strings(fixed_content)
+        
         # Try to find and extract just the JSON object
         json_match = re.search(r'(\{.*\})', fixed_content, re.DOTALL)
         if json_match:
@@ -51,11 +66,63 @@ def safe_json_parse(content: str, context: str = "unknown") -> Optional[Dict[str
     # Third attempt: try to extract key-value pairs manually for simple cases
     try:
         if context == "cross_reference_check":
-            # Create a minimal valid response for cross-reference check
+            # Create a minimal valid response for cross_reference_check
             return {
                 "corrected_sections": {},
                 "changes_made": ["JSON parsing failed - no corrections applied"],
                 "issues_found": ["JSON parsing error prevented analysis"]
+            }
+        elif context == "reorder_sections":
+            # Create a minimal valid response for reorder_sections
+            return {
+                "optimized_sections": ["professional_summary", "skills", "experience", "projects", "education", "certifications", "extracurricular"],
+                "reasoning": {
+                    "professional_summary": "Standard order - summary first",
+                    "skills": "Skills early to show capabilities",
+                    "experience": "Experience after skills to demonstrate application",
+                    "projects": "Projects to show practical work",
+                    "education": "Education towards the end",
+                    "certifications": "Certifications after education",
+                    "extracurricular": "Extracurricular activities last"
+                }
+            }
+        elif context == "resolve_inconsistencies":
+            # Create a minimal valid response for resolve_inconsistencies
+            return {
+                "corrections": ["JSON parsing failed - no corrections applied"],
+                "updated_sections": {},
+                "resolution_summary": "JSON parsing error prevented inconsistency resolution"
+            }
+    except Exception:
+        pass
+    
+    # Fourth attempt: try to parse as plain text and extract structured information
+    try:
+        if context == "cross_reference_check":
+            # Try to extract issues from plain text
+            issues = []
+            if "issue" in content.lower() or "problem" in content.lower():
+                # Extract numbered or bulleted issues
+                issue_matches = re.findall(r'[0-9]+\.\s*(.+?)(?=\n|$)', content, re.IGNORECASE)
+                issues.extend(issue_matches)
+            
+            return {
+                "corrected_sections": {},
+                "changes_made": ["Parsed from plain text - limited analysis"],
+                "issues_found": issues if issues else ["Analysis completed from plain text response"]
+            }
+        elif context == "resolve_inconsistencies":
+            # Try to extract corrections from plain text
+            corrections = []
+            if "correction" in content.lower() or "fix" in content.lower():
+                # Extract numbered or bulleted corrections
+                correction_matches = re.findall(r'[0-9]+\.\s*(.+?)(?=\n|$)', content, re.IGNORECASE)
+                corrections.extend(correction_matches)
+            
+            return {
+                "corrections": corrections if corrections else ["Parsed from plain text - limited corrections"],
+                "updated_sections": {},
+                "resolution_summary": "Inconsistencies analyzed from plain text response"
             }
     except Exception:
         pass
