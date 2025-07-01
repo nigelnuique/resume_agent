@@ -31,6 +31,12 @@ def validate_yaml(state: ResumeState) -> ResumeState:
         if 'sections' in cv_data:
             sections = cv_data['sections']
             
+            # Ensure sections is a dictionary
+            if not isinstance(sections, dict):
+                validation_errors.append("Sections must be a dictionary, not a list")
+                state['yaml_validated'] = True
+                return state
+            
             # Validate each section type
             section_validators = {
                 'professional_summary': validate_professional_summary,
@@ -65,6 +71,19 @@ def validate_yaml(state: ResumeState) -> ResumeState:
             errors, warnings = check_func(working_cv)
             validation_errors.extend(errors)
             validation_warnings.extend(warnings)
+        
+        # --- Fix C++ in skills section for RenderCV/Markdown compatibility ---
+        if 'sections' in cv_data and 'skills' in cv_data['sections']:
+            skills = cv_data['sections']['skills']
+            for i, skill in enumerate(skills):
+                if isinstance(skill, dict) and 'details' in skill and isinstance(skill['details'], str):
+                    # Replace C++ with `C++` if not already quoted/escaped
+                    original = skill['details']
+                    fixed = original.replace('C++', '`C++`')
+                    if fixed != original:
+                        skill['details'] = fixed
+                        validation_warnings.append(f"skills: Entry {i} - Replaced 'C++' with '`C++`' for Markdown safety.")
+        # --- End C++ fix ---
         
         # Update state
         state['errors'].extend(validation_errors)
@@ -214,9 +233,10 @@ def check_date_formats(cv_data) -> tuple:
                                 warnings.append(f"{section_name} entry {i}: {date_field} should be string, int, or 'present'")
     
     sections = cv_data.get('cv', {}).get('sections', {})
-    for section_name, section_data in sections.items():
-        if section_name in ['experience', 'education', 'projects']:
-            check_dates_in_section(section_data, section_name)
+    if isinstance(sections, dict):
+        for section_name, section_data in sections.items():
+            if section_name in ['experience', 'education', 'projects']:
+                check_dates_in_section(section_data, section_name)
     
     return errors, warnings
 
@@ -226,15 +246,16 @@ def check_highlight_strings(cv_data) -> tuple:
     warnings = []
     
     sections = cv_data.get('cv', {}).get('sections', {})
-    for section_name, section_data in sections.items():
-        if isinstance(section_data, list):
-            for i, entry in enumerate(section_data):
-                if isinstance(entry, dict) and 'highlights' in entry:
-                    highlights = entry['highlights']
-                    if isinstance(highlights, list):
-                        for j, highlight in enumerate(highlights):
-                            if not isinstance(highlight, str):
-                                errors.append(f"{section_name} entry {i} highlight {j} must be a string")
+    if isinstance(sections, dict):
+        for section_name, section_data in sections.items():
+            if isinstance(section_data, list):
+                for i, entry in enumerate(section_data):
+                    if isinstance(entry, dict) and 'highlights' in entry:
+                        highlights = entry['highlights']
+                        if isinstance(highlights, list):
+                            for j, highlight in enumerate(highlights):
+                                if not isinstance(highlight, str):
+                                    errors.append(f"{section_name} entry {i} highlight {j} must be a string")
     
     return errors, warnings
 
@@ -251,14 +272,15 @@ def check_required_entry_fields(cv_data) -> tuple:
     }
     
     sections = cv_data.get('cv', {}).get('sections', {})
-    for section_name, required_fields in field_requirements.items():
-        if section_name in sections:
-            section_data = sections[section_name]
-            if isinstance(section_data, list):
-                for i, entry in enumerate(section_data):
-                    if isinstance(entry, dict):
-                        for field in required_fields:
-                            if field not in entry or not entry[field]:
-                                errors.append(f"{section_name} entry {i} missing required field: {field}")
+    if isinstance(sections, dict):
+        for section_name, required_fields in field_requirements.items():
+            if section_name in sections:
+                section_data = sections[section_name]
+                if isinstance(section_data, list):
+                    for i, entry in enumerate(section_data):
+                        if isinstance(entry, dict):
+                            for field in required_fields:
+                                if field not in entry or not entry[field]:
+                                    errors.append(f"{section_name} entry {i} missing required field: {field}")
     
     return errors, warnings 

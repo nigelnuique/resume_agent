@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """
-Resume Agent - Automated Resume Tailoring System
-Uses LangGraph to orchestrate AI-powered resume tailoring based on job advertisements.
+Resume Agent - Interactive Resume Tailoring System
+Uses LangGraph to orchestrate AI-powered resume tailoring with user interaction after each node.
 """
 
 import os
 import copy
 import subprocess
 from typing import Dict, Any
-from langgraph.graph import StateGraph, END
 from dotenv import load_dotenv
 
 # Import state and all nodes
@@ -23,57 +22,74 @@ from nodes.tailor_skills import tailor_skills
 from nodes.tailor_certifications import tailor_certifications
 from nodes.tailor_extracurricular import tailor_extracurricular
 from nodes.validate_yaml import validate_yaml
+from utils.interactive_rendering import save_and_render_cv, get_next_node_name
 
-def setup_workflow() -> StateGraph:
-    """Set up the LangGraph workflow for resume tailoring."""
+def create_interactive_node(original_node_func, node_name: str):
+    """
+    Create a wrapper function that renders the CV and asks for user input after the original node.
     
-    # Create the graph
-    workflow = StateGraph(ResumeState)
+    Args:
+        original_node_func: The original node function
+        node_name: Name of the node
+        
+    Returns:
+        Wrapper function that includes rendering and user interaction
+    """
+    def interactive_node(state: ResumeState) -> ResumeState:
+        """Interactive wrapper for node execution with rendering and user input."""
+        print(f"\n{'='*60}")
+        print(f"🚀 Starting node: {node_name}")
+        print(f"{'='*60}")
+        
+        # Execute the original node
+        state = original_node_func(state)
+        
+        # Check if there were errors in the node
+        if state.get('errors'):
+            print(f"⚠️ Node {node_name} completed with errors")
+            # Still render and ask user if they want to proceed
+            proceed = save_and_render_cv(state, node_name)
+        else:
+            print(f"✅ Node {node_name} completed successfully")
+            # Render and ask user if they want to proceed
+            proceed = save_and_render_cv(state, node_name)
+        
+        # Store the user's decision in the state
+        state[f'{node_name}_user_proceed'] = proceed
+        
+        if not proceed:
+            # User chose to stop
+            next_node = get_next_node_name(node_name)
+            print(f"\n⏹️ User chose to stop after {node_name}")
+            print(f"📋 Next node would have been: {next_node}")
+            print(f"📄 Final CV is available in rendercv_output/")
+            # Set a flag to indicate early termination
+            state['workflow_terminated_by_user'] = True
+            state['termination_node'] = node_name
+        
+        return state
     
-    # Add core nodes (non-tailoring nodes)
-    workflow.add_node("parse_job_ad", parse_job_ad)
-    workflow.add_node("reorder_sections", reorder_sections)
-    workflow.add_node("update_summary", update_summary)
-    workflow.add_node("validate_yaml", validate_yaml)
-    
-    # Define the workflow sequence
-    workflow.set_entry_point("parse_job_ad")
-    
-    # New order: Parse job → Reorder/optimize → Tailor individual sections → Final checks
-    workflow.add_edge("parse_job_ad", "reorder_sections")
-    workflow.add_edge("reorder_sections", "update_summary")
+    return interactive_node
 
-    # Helper function for conditional skipping
-    def skip_if_removed(section_name, node_name):
-        def wrapper(state: ResumeState) -> ResumeState:
-            removed = state.get('removed_sections', [])
-            if section_name in removed:
-                print(f"⏭️ Skipping {node_name} (section '{section_name}' was removed)")
-                state[f'{node_name}_skipped'] = True
-                # Set the tailored flag to True so summary shows as completed
-                state[f'{section_name}_tailored'] = True
-                return state
-            return globals()[node_name](state)
-        return wrapper
-
-    # Add tailoring nodes with conditional wrappers
-    workflow.add_node("tailor_experience", skip_if_removed('experience', 'tailor_experience'))
-    workflow.add_node("tailor_projects", skip_if_removed('projects', 'tailor_projects'))
-    workflow.add_node("tailor_education", skip_if_removed('education', 'tailor_education'))
-    workflow.add_node("tailor_certifications", skip_if_removed('certifications', 'tailor_certifications'))
-    workflow.add_node("tailor_extracurricular", skip_if_removed('extracurricular', 'tailor_extracurricular'))
-    workflow.add_node("tailor_skills", skip_if_removed('skills', 'tailor_skills'))
-
-    workflow.add_edge("update_summary", "tailor_experience")
-    workflow.add_edge("tailor_experience", "tailor_projects")
-    workflow.add_edge("tailor_projects", "tailor_education")
-    workflow.add_edge("tailor_education", "tailor_certifications")
-    workflow.add_edge("tailor_certifications", "tailor_extracurricular")
-    workflow.add_edge("tailor_extracurricular", "tailor_skills")
-    workflow.add_edge("tailor_skills", "validate_yaml")
-    workflow.add_edge("validate_yaml", END)
+def setup_interactive_workflow():
+    """Set up the interactive workflow with rendering and user interaction."""
+    print("🔧 Setting up interactive workflow...")
     
-    return workflow
+    # Create interactive versions of all nodes
+    interactive_nodes = {
+        "parse_job_ad": create_interactive_node(parse_job_ad, "parse_job_ad"),
+        "update_summary": create_interactive_node(update_summary, "update_summary"),
+        "tailor_experience": create_interactive_node(tailor_experience, "tailor_experience"),
+        "tailor_projects": create_interactive_node(tailor_projects, "tailor_projects"),
+        "tailor_education": create_interactive_node(tailor_education, "tailor_education"),
+        "tailor_skills": create_interactive_node(tailor_skills, "tailor_skills"),
+        "tailor_certifications": create_interactive_node(tailor_certifications, "tailor_certifications"),
+        "tailor_extracurricular": create_interactive_node(tailor_extracurricular, "tailor_extracurricular"),
+        "reorder_sections": create_interactive_node(reorder_sections, "reorder_sections"),
+        "validate_yaml": create_interactive_node(validate_yaml, "validate_yaml")
+    }
+    
+    return interactive_nodes
 
 def load_initial_data() -> ResumeState:
     """Load master CV and job advertisement into initial state."""
@@ -163,77 +179,15 @@ def validate_working_cv_sections(state: ResumeState) -> None:
         print(f"   ⚠️ {error_msg}")
         state['warnings'].append(error_msg)
 
-def save_working_cv(state: ResumeState, filename: str = "working_CV.yaml") -> None:
-    """Save the working CV to file."""
-    try:
-        save_cv_to_file(state['working_cv'], filename)
-        state['output_file'] = filename
-        print(f"💾 Saved working CV to {filename}")
-    except Exception as e:
-        error_msg = f"Error saving working CV: {str(e)}"
-        print(f"❌ {error_msg}")
-        state['errors'].append(error_msg)
-
-def render_cv(filename: str = "working_CV.yaml", output_dir: str = "rendercv_output") -> bool:
-    """Render the CV using RenderCV."""
-    print(f"🎨 Rendering CV using RenderCV...")
-    
-    try:
-        # Ensure output directory exists
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Run RenderCV using Python module instead of command line
-        cmd = ["python", "-m", "rendercv", "render", filename]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-        
-        if result.returncode == 0:
-            # Move generated files to output directory
-            import shutil
-            import glob
-            
-            # Get base name from filename (without .yaml extension)
-            base_name = os.path.splitext(filename)[0]
-            cv_name = os.path.basename(base_name)
-            
-            # Look for generated files and move them to output directory
-            generated_files = []
-            for pattern in [f"{cv_name}*.pdf", f"{cv_name}*.html", f"{cv_name}*.png", f"{cv_name}*.md", f"{cv_name}*.typ"]:
-                files = glob.glob(pattern)
-                for file in files:
-                    dest_path = os.path.join(output_dir, os.path.basename(file))
-                    shutil.move(file, dest_path)
-                    generated_files.append(os.path.basename(file))
-            
-            print("✅ CV rendered successfully!")
-            print(f"   📄 Output files saved to {output_dir}/")
-            
-            # List moved files
-            for file in generated_files:
-                print(f"   - {file}")
-            
-            return True
-        else:
-            print("❌ RenderCV failed:")
-            print(result.stderr)
-            return False
-            
-    except subprocess.TimeoutExpired:
-        print("❌ RenderCV command timed out")
-        return False
-    except Exception as e:
-        print(f"❌ Error rendering CV: {str(e)}")
-        return False
-
-def print_summary(state: ResumeState) -> None:
-    """Print a summary of the tailoring process."""
+def print_interactive_summary(state: ResumeState) -> None:
+    """Print a summary of the interactive tailoring process."""
     print("\n" + "="*60)
-    print("📊 RESUME TAILORING SUMMARY")
+    print("📊 INTERACTIVE RESUME TAILORING SUMMARY")
     print("="*60)
     
     # Process status
     process_steps = [
-        ("Job advertisement parsed", state.get('job_requirements', {})),
-        ("Sections reordered", state.get('sections_reordered', False)),
+        ("Job advertisement parsed", state.get('job_parsed', False)),
         ("Summary updated", state.get('summary_updated', False)),
         ("Experience tailored", state.get('experience_tailored', False)),
         ("Projects tailored", state.get('projects_tailored', False)),
@@ -241,6 +195,7 @@ def print_summary(state: ResumeState) -> None:
         ("Skills tailored", state.get('skills_tailored', False)),
         ("Certifications tailored", state.get('certifications_tailored', False)),
         ("Extracurricular tailored", state.get('extracurricular_tailored', False)),
+        ("Sections reordered", state.get('sections_reordered', False)),
         ("YAML validated", state.get('yaml_validated', False))
     ]
     
@@ -248,6 +203,15 @@ def print_summary(state: ResumeState) -> None:
     for step_name, status in process_steps:
         icon = "✅" if status else "❌"
         print(f"   {icon} {step_name}")
+    
+    # User interaction summary
+    print("\n👤 User Interaction:")
+    workflow_terminated = state.get('workflow_terminated_by_user', False)
+    if workflow_terminated:
+        termination_node = state.get('termination_node', 'Unknown')
+        print(f"   ⏹️ Workflow terminated by user after: {termination_node}")
+    else:
+        print(f"   ✅ Workflow completed through all nodes")
     
     # Job analysis summary
     job_reqs = state.get('job_requirements', {})
@@ -284,9 +248,9 @@ def print_summary(state: ResumeState) -> None:
     
     print("\n" + "="*60)
 
-def main():
-    """Main function to run the resume tailoring agent."""
-    print("🚀 Resume Agent - Starting tailoring process...")
+def run_interactive_workflow():
+    """Run the interactive workflow with user interaction after each node."""
+    print("🚀 Resume Agent - Starting interactive tailoring process...")
     print("="*60)
     
     # Load environment variables from .env file
@@ -306,47 +270,72 @@ def main():
     
     if state['errors']:
         print("❌ Cannot proceed due to initial data loading errors")
-        print_summary(state)
+        print_interactive_summary(state)
         return
     
-    # Set up and compile the workflow
-    print("\n🔧 Setting up workflow...")
-    workflow = setup_workflow()
+    # Set up interactive workflow
+    interactive_nodes = setup_interactive_workflow()
     
-    # Use in-memory checkpointer for this demo
-    # In production, you might want to use SqliteSaver for persistence
-    app = workflow.compile()
+    # Define the workflow sequence
+    workflow_sequence = [
+        "parse_job_ad",
+        "reorder_sections",
+        "update_summary",
+        "tailor_experience",
+        "tailor_projects",
+        "tailor_education",
+        "tailor_certifications",
+        "tailor_extracurricular",
+        "tailor_skills",
+        "validate_yaml"
+    ]
     
-    # Run the workflow
-    print("\n⚙️ Running tailoring workflow...")
+    # Map tailoring nodes to their section names for skipping
+    tailoring_section_map = {
+        "tailor_experience": "experience",
+        "tailor_projects": "projects",
+        "tailor_education": "education",
+        "tailor_certifications": "certifications",
+        "tailor_extracurricular": "extracurricular",
+        "tailor_skills": "skills"
+    }
+
+    print("\n⚙️ Running interactive tailoring workflow...")
     print("-" * 40)
     
     try:
-        # Execute the workflow
-        final_state = app.invoke(state)
+        # Execute each node in sequence
+        for node_name in workflow_sequence:
+            # Skip tailoring nodes if their section was removed
+            if node_name in tailoring_section_map:
+                removed = state.get('removed_sections', [])
+                section = tailoring_section_map[node_name]
+                if section in removed:
+                    print(f"⏭️ Skipping {node_name} (section '{section}' was removed)")
+                    state[f'{node_name}_skipped'] = True
+                    state[f'{section}_tailored'] = True
+                    continue
+            if node_name in interactive_nodes:
+                state = interactive_nodes[node_name](state)
+                # Check if user chose to stop
+                if state.get('workflow_terminated_by_user', False):
+                    break
+            else:
+                print(f"⚠️ Node {node_name} not found in interactive nodes")
         
-        # Save the working CV
-        save_working_cv(final_state)
+        # Print final summary
+        print_interactive_summary(state)
         
-        # Render the CV if no critical errors
-        if not final_state.get('errors'):
-            success = render_cv()
-            if not success:
-                print("⚠️ CV tailoring completed but rendering failed")
+        if state.get('workflow_terminated_by_user', False):
+            print("⏹️ Interactive workflow completed - terminated by user")
+        elif not state.get('errors'):
+            print("🎉 Interactive resume tailoring completed successfully!")
         else:
-            print("⚠️ Skipping CV rendering due to errors in tailoring process")
-        
-        # Print summary
-        print_summary(final_state)
-        
-        if not final_state.get('errors'):
-            print("🎉 Resume tailoring completed successfully!")
-        else:
-            print("⚠️ Resume tailoring completed with errors - please review")
+            print("⚠️ Interactive resume tailoring completed with errors - please review")
             
     except Exception as e:
-        print(f"❌ Fatal error during workflow execution: {str(e)}")
+        print(f"❌ Fatal error during interactive workflow execution: {str(e)}")
         print("   Check your OpenAI API key and internet connection")
 
 if __name__ == "__main__":
-    main() 
+    run_interactive_workflow() 

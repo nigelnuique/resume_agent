@@ -23,9 +23,9 @@ def tailor_certifications(state: ResumeState) -> ResumeState:
         job_requirements = state['job_requirements']
         
         prompt = f"""
-        Tailor the certifications section by selecting only relevant certifications and ordering them by relevance.
+        Tailor the certifications section by selecting relevant certifications and ordering them by relevance.
 
-        Current Certifications:
+        Current Certifications (USE ONLY THESE - DO NOT CREATE NEW ONES):
         {current_certifications}
 
         Job Requirements:
@@ -34,21 +34,32 @@ def tailor_certifications(state: ResumeState) -> ResumeState:
         - Key Technologies: {job_requirements.get('key_technologies', [])}
         - Essential Requirements: {job_requirements.get('essential_requirements', [])}
         - Desirable Requirements: {job_requirements.get('desirable_requirements', [])}
+        - Certifications Required: {job_requirements.get('certifications_required', [])}
+        - Technical Expertise: {job_requirements.get('technical_expertise', [])}
+        - Professional Qualifications: {job_requirements.get('professional_qualifications', [])}
 
         Instructions:
-        1. Select ONLY certifications that are relevant to the target role
-        2. Order them by relevance (most relevant first)
-        3. Remove certifications that are:
-           - Unrelated to the job requirements
-           - Too generic or outdated
-           - Not adding value to the application
-        4. Keep certifications that demonstrate:
-           - Skills mentioned in job requirements
-           - Industry knowledge relevant to the role
-           - Technical competencies needed for the position
+        1. Include any certification that relates to any skill, technology, or area of expertise mentioned in the job requirements.
+        2. Be inclusive: if there is any reasonable connection between a certification and the job requirements, keep it.
+        3. Prioritize certifications that demonstrate proficiency in the job's key technical or professional areas.
+        4. Order certifications by relevance to the job requirements (most relevant first).
+        5. Remove only certifications that are completely unrelated to the role's requirements.
+
+        CRITICAL RULES:
+        - Use ONLY the actual certifications listed above.
+        - DO NOT create, invent, or generate new certification names.
+        - If a certification relates to any skill, technology, or area of expertise in the job requirements, keep it.
+        - Only remove certifications that are completely irrelevant to the job requirements.
+        - When in doubt, keep the certification.
+
+        PRIORITY ORDER:
+        1. Certifications for skills, technologies, or areas of expertise mentioned in the job requirements.
+        2. Industry-specific certifications relevant to the role.
+        3. Professional certifications that demonstrate relevant expertise.
+        4. General certifications that show professional development.
 
         Return a JSON object with:
-        - "relevant_certifications": list of relevant certifications in order of relevance
+        - "relevant_certifications": list of relevant certifications in order of relevance (use EXACT names from the list above)
         - "removed_certifications": list of certification names that were removed
         - "changes_summary": brief explanation of selection criteria and changes made
         """
@@ -56,13 +67,13 @@ def tailor_certifications(state: ResumeState) -> ResumeState:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are an expert resume writer. Select and prioritize the most relevant certifications for the target role."},
+                {"role": "system", "content": "You are an expert resume writer specializing in certification selection. CRITICAL: Be INCLUSIVE - if a certification relates to ANY skill, technology, or expertise mentioned in the job requirements, you MUST include it. Only remove certifications that are completely irrelevant to the role. Prioritize technical certifications that demonstrate proficiency in the job's key areas. Use ONLY the actual certifications provided - never create or invent new ones. When in doubt, KEEP the certification."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3
         )
         
-        result = safe_json_parse(response.choices[0].message.content, "tailor_certifications")
+        result = safe_json_parse(response.choices[0].message.content or "", "tailor_certifications")
         
         if result is None:
             # Provide fallback behavior - keep all certifications
