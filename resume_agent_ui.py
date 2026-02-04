@@ -1694,8 +1694,8 @@ UI_HTML = """
 
                 <div class="input-group">
                     <label for="job-ad">Job Advertisement</label>
-                    <div class="input-hint">Paste the full job posting including requirements, responsibilities, and qualifications.</div>
-                    <textarea id="job-ad" placeholder="Paste the job advertisement text here..."></textarea>
+                    <div class="input-hint">Paste the full job posting text or a link to the job ad. Links are fetched automatically.</div>
+                    <textarea id="job-ad" placeholder="Paste job ad text or URL (e.g. https://...)"></textarea>
                 </div>
             </div>
 
@@ -2030,14 +2030,15 @@ UI_HTML = """
                             el.value = data.text;
                             showToast('Job posting fetched from URL', 'success');
                         } else {
-                            el.value = val;
-                            showToast('Could not parse URL, using raw link', 'info');
+                            el.value = '';
+                            var msg = data.error || 'Could not fetch content from this URL';
+                            showToast(msg, 'error');
                         }
                     })
                     .catch(function() {
                         el.disabled = false;
-                        el.value = val;
-                        showToast('Could not fetch URL, using raw link', 'info');
+                        el.value = '';
+                        showToast('Could not fetch URL. Please paste the job ad text directly.', 'error');
                     });
                 }
             }, 100);
@@ -3033,14 +3034,24 @@ def fetch_url():
         return jsonify({"success": False, "error": "No URL provided"})
     try:
         resp = _requests.get(url, timeout=15, headers={
-            'User-Agent': 'Mozilla/5.0 (compatible; ResumeAgent/1.0)'
-        })
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }, allow_redirects=True)
         resp.raise_for_status()
+        # Detect login/auth walls
+        final_url = resp.url.lower()
+        _auth_indicators = ['login', 'signin', 'sign-in', 'sign_in', 'auth', 'sso', 'checkpoint']
+        if any(ind in final_url for ind in _auth_indicators):
+            return jsonify({"success": False, "error": "This site requires login. Please copy the job ad text directly from the page instead."})
         content_type = resp.headers.get('Content-Type', '')
         if 'html' in content_type:
             text = _html_to_text(resp.text)
         else:
             text = resp.text
+        text_lower = text.lower()
+        _auth_phrases = ['sign in', 'log in', 'create an account', 'join now', 'forgot password']
+        auth_hits = sum(1 for p in _auth_phrases if p in text_lower)
+        if auth_hits >= 3:
+            return jsonify({"success": False, "error": "This site requires login. Please copy the job ad text directly from the page instead."})
         if len(text.strip()) < 50:
             return jsonify({"success": False, "error": "Page content too short"})
         return jsonify({"success": True, "text": text[:50000]})
