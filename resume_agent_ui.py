@@ -196,13 +196,12 @@ class ResumeAgentUI:
                 workflow_steps = [
                     ('parse_job_ad', 'Analyzing job requirements...', 20),
                     ('reorder_sections', 'Optimizing section order...', 30),
-                    ('update_summary', 'Updating professional summary...', 40),
-                    ('tailor_experience', 'Tailoring work experience...', 50),
-                    ('tailor_projects', 'Tailoring projects...', 60),
-                    ('tailor_education', 'Tailoring education...', 65),
-                    ('tailor_certifications', 'Tailoring certifications...', 70),
-                    ('tailor_extracurricular', 'Tailoring extracurricular activities...', 75),
-                    ('tailor_skills', 'Tailoring skills...', 80),
+                    ('tailor_summary_and_skills', 'Tailoring summary and skills together...', 45),
+                    ('tailor_experience', 'Tailoring work experience...', 55),
+                    ('tailor_projects', 'Tailoring projects...', 65),
+                    ('tailor_education', 'Tailoring education...', 70),
+                    ('tailor_certifications', 'Tailoring certifications...', 75),
+                    ('tailor_extracurricular', 'Tailoring extracurricular activities...', 80),
                     ('validate_yaml', 'Validating final output...', 85)
                 ]
                 
@@ -399,252 +398,562 @@ UI_HTML = """
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/darcula.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #1e1e1e;
-            color: #ffffff;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f0f;
+            color: #e4e4e7;
             line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
-        
+
+        /* ── Toast Notifications ── */
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .toast {
+            pointer-events: auto;
+            min-width: 320px;
+            max-width: 480px;
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            animation: toastIn 0.35s cubic-bezier(0.21,1.02,0.73,1) forwards;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .toast.hiding {
+            animation: toastOut 0.3s ease forwards;
+        }
+
+        .toast-success {
+            background: rgba(34,197,94,0.15);
+            color: #4ade80;
+            border-color: rgba(34,197,94,0.2);
+        }
+
+        .toast-error {
+            background: rgba(239,68,68,0.15);
+            color: #f87171;
+            border-color: rgba(239,68,68,0.2);
+        }
+
+        .toast-info {
+            background: rgba(59,130,246,0.15);
+            color: #60a5fa;
+            border-color: rgba(59,130,246,0.2);
+        }
+
+        .toast-icon { font-size: 18px; flex-shrink: 0; }
+        .toast-text { flex: 1; }
+
+        .toast-close {
+            background: none;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            opacity: 0.5;
+            font-size: 18px;
+            padding: 0 0 0 8px;
+            line-height: 1;
+        }
+        .toast-close:hover { opacity: 1; }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(40px) scale(0.96); }
+            to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes toastOut {
+            from { opacity: 1; transform: translateX(0) scale(1); }
+            to   { opacity: 0; transform: translateX(40px) scale(0.96); }
+        }
+
+        /* ── Header ── */
         .header {
-            background: #2d2d2d;
-            padding: 20px;
-            border-bottom: 1px solid #404040;
+            background: linear-gradient(135deg, #18181b 0%, #1a1a2e 100%);
+            padding: 28px 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
             text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(16px);
         }
-        
+
         .header h1 {
-            font-size: 28px;
+            font-size: 26px;
             font-weight: 700;
-            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-        
+
         .header p {
-            color: #ccc;
-            font-size: 16px;
+            color: #71717a;
+            font-size: 14px;
+            margin-top: 4px;
         }
-        
+
+        /* ── Container ── */
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 0 20px;
+            padding: 0 24px;
+            flex: 1;
         }
-        
-        .workflow-section {
-            background: #2d2d2d;
-            margin: 20px 0;
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #404040;
+
+        /* ── Cards ── */
+        .card {
+            background: #18181b;
+            margin: 24px 0;
+            padding: 28px;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: border-color 0.2s;
         }
-        
-        .workflow-explanation {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            margin-bottom: 20px;
+
+        .card:hover {
+            border-color: rgba(255,255,255,0.1);
         }
-        
-        .workflow-step {
-            display: flex;
-            align-items: flex-start;
-            gap: 15px;
-            padding: 15px;
-            background: #1e1e1e;
-            border-radius: 6px;
-            border: 1px solid #404040;
-        }
-        
-        .step-icon {
-            font-size: 24px;
-            min-width: 40px;
-            text-align: center;
-        }
-        
-        .step-content h3 {
-            color: #4fc3f7;
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        
-        .step-content p {
-            color: #ccc;
-            font-size: 14px;
-            line-height: 1.5;
-            margin: 0;
-        }
-        
-        .workflow-tip {
-            background: #2a4a2a;
-            border: 1px solid #4a8a4a;
-            border-radius: 6px;
-            padding: 15px;
-            color: #e8f5e8;
-            font-size: 14px;
-        }
-        
-        @media (max-width: 768px) {
-            .workflow-step {
-                flex-direction: column;
-                text-align: center;
-            }
-            
-            .step-icon {
-                min-width: auto;
-            }
-        }
-        
+
         .section-title {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 600;
-            margin-bottom: 15px;
-            color: #4fc3f7;
+            margin-bottom: 20px;
+            color: #e4e4e7;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        
-        .input-group {
-            margin-bottom: 15px;
-        }
-        
-        .input-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-            color: #ccc;
-        }
-        
-        .input-group textarea {
-            width: 100%;
-            min-height: 120px;
-            padding: 12px;
-            background: #1e1e1e;
-            border: 1px solid #404040;
-            border-radius: 4px;
-            color: #fff;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 14px;
-            resize: vertical;
-        }
-        
-        .input-group textarea:focus {
-            outline: none;
-            border-color: #4fc3f7;
-        }
-        
-        .btn {
-            background: #4fc3f7;
-            color: #1e1e1e;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .btn:hover {
-            background: #29b6f6;
-            transform: translateY(-1px);
-        }
-        
-        .btn:disabled {
-            background: #666;
-            color: #ccc;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .btn-secondary {
-            background: #666;
-            color: #fff;
-        }
-        
-        .btn-secondary:hover {
-            background: #777;
-        }
-        
-        .progress-section {
-            background: #2d2d2d;
-            margin: 20px 0;
-            padding: 20px;
+
+        .section-title .icon {
+            width: 32px;
+            height: 32px;
             border-radius: 8px;
-            border: 1px solid #404040;
-            display: none;
-        }
-        
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: #404040;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 15px;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: #4fc3f7;
-            transition: width 0.3s ease;
-            width: 0%;
-        }
-        
-        .progress-message {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             font-size: 16px;
-            color: #ccc;
-            text-align: center;
+            flex-shrink: 0;
         }
-        
-        .editor-section {
-            background: #2d2d2d;
-            margin: 20px 0;
-            border-radius: 8px;
-            border: 1px solid #404040;
-            overflow: hidden;
-            display: none;
-        }
-        
-        .editor-header {
-            background: #333;
-            padding: 15px 20px;
-            border-bottom: 1px solid #404040;
+
+        .icon-blue   { background: rgba(59,130,246,0.15); }
+        .icon-purple { background: rgba(139,92,246,0.15); }
+        .icon-green  { background: rgba(34,197,94,0.15); }
+        .icon-amber  { background: rgba(245,158,11,0.15); }
+
+        /* ── Collapsible How-it-Works ── */
+        .how-it-works-toggle {
             display: flex;
             align-items: center;
             justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
         }
-        
-        .editor-status {
+
+        .how-it-works-toggle .chevron {
+            transition: transform 0.3s ease;
+            color: #71717a;
+            font-size: 20px;
+        }
+
+        .how-it-works-toggle .chevron.open {
+            transform: rotate(180deg);
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+            opacity: 0;
+        }
+
+        .collapsible-content.open {
+            max-height: 800px;
+            opacity: 1;
+        }
+
+        /* ── Workflow Steps (horizontal on desktop) ── */
+        .workflow-steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin: 20px 0;
+        }
+
+        .workflow-step {
+            padding: 20px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.05);
+            text-align: center;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+
+        .workflow-step:hover {
+            border-color: rgba(96,165,250,0.3);
+            transform: translateY(-2px);
+        }
+
+        .step-number {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: #fff;
+            font-weight: 700;
+            font-size: 15px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+
+        .step-content h3 {
+            color: #e4e4e7;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .step-content p {
+            color: #a1a1aa;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .workflow-tip {
+            background: rgba(34,197,94,0.06);
+            border: 1px solid rgba(34,197,94,0.15);
+            border-radius: 8px;
+            padding: 14px 16px;
+            color: #86efac;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        /* ── Input Section ── */
+        .input-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
             font-size: 14px;
-            padding: 4px 8px;
-            border-radius: 4px;
-            background: #007acc;
+            color: #a1a1aa;
         }
-        
+
+        .input-group textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 14px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            color: #e4e4e7;
+            font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            resize: vertical;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            flex: 1;
+        }
+
+        .input-group textarea:focus {
+            outline: none;
+            border-color: rgba(96,165,250,0.5);
+            box-shadow: 0 0 0 3px rgba(96,165,250,0.1);
+        }
+
+        .input-group textarea::placeholder {
+            color: #52525b;
+        }
+
+        .input-hint {
+            font-size: 13px;
+            color: #71717a;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        /* ── File Upload - Drag & Drop Zone ── */
+        .file-drop-zone {
+            border: 2px dashed rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .file-drop-zone:hover {
+            border-color: rgba(96,165,250,0.4);
+            background: rgba(96,165,250,0.04);
+        }
+
+        .file-drop-zone.drag-over {
+            border-color: #3b82f6;
+            background: rgba(59,130,246,0.08);
+            transform: scale(1.01);
+        }
+
+        .file-drop-zone input[type=file] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-drop-icon { font-size: 28px; margin-bottom: 8px; }
+        .file-drop-text { font-size: 14px; color: #a1a1aa; }
+        .file-drop-text strong { color: #60a5fa; }
+        .file-drop-hint { font-size: 12px; color: #52525b; margin-top: 4px; }
+
+        .file-name-display {
+            font-size: 13px;
+            color: #4ade80;
+            margin-top: 8px;
+            display: none;
+        }
+
+        /* ── Buttons ── */
+        .btn {
+            border: none;
+            padding: 12px 28px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(59,130,246,0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 24px rgba(59,130,246,0.4);
+        }
+
+        .btn-primary:disabled {
+            background: #27272a;
+            color: #52525b;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.06);
+            color: #a1a1aa;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.1);
+            color: #e4e4e7;
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(16,185,129,0.25);
+        }
+
+        .btn-download:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 24px rgba(16,185,129,0.35);
+        }
+
+        .btn-center {
+            display: flex;
+            justify-content: center;
+            margin-top: 24px;
+        }
+
+        /* ── Progress Section ── */
+        .progress-section {
+            margin: 24px 0;
+            display: none;
+        }
+
+        .progress-card {
+            background: #18181b;
+            padding: 28px;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .progress-bar-track {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            border-radius: 3px;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 0%;
+            position: relative;
+        }
+
+        .progress-bar-fill::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .progress-message {
+            font-size: 14px;
+            color: #a1a1aa;
+            text-align: center;
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            gap: 4px;
+        }
+
+        .progress-step-dot {
+            flex: 1;
+            height: 3px;
+            border-radius: 2px;
+            background: rgba(255,255,255,0.06);
+            transition: background 0.3s;
+        }
+
+        .progress-step-dot.active {
+            background: #3b82f6;
+        }
+
+        .progress-step-dot.completed {
+            background: #4ade80;
+        }
+
+        /* ── Editor Section ── */
+        .editor-section {
+            background: #18181b;
+            margin: 24px 0;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.06);
+            overflow: hidden;
+            display: none;
+        }
+
+        .editor-header {
+            background: rgba(255,255,255,0.02);
+            padding: 16px 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .editor-header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .editor-header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .editor-status {
+            font-size: 12px;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        .editor-status.info {
+            background: rgba(59,130,246,0.12);
+            color: #60a5fa;
+        }
+
         .editor-status.error {
-            background: #d73a49;
+            background: rgba(239,68,68,0.12);
+            color: #f87171;
         }
-        
+
         .editor-status.success {
-            background: #28a745;
+            background: rgba(34,197,94,0.12);
+            color: #4ade80;
         }
-        
+
         .editor-main {
             display: flex;
-            height: 600px;
+            height: 650px;
         }
-        
+
         .editor-panel {
             width: 50%;
-            border-right: 1px solid #404040;
+            border-right: 1px solid rgba(255,255,255,0.06);
         }
-        
+
         .preview-panel {
             width: 50%;
             background: #f8f9fa;
@@ -654,162 +963,254 @@ UI_HTML = """
             justify-content: center;
             position: relative;
         }
-        
+
         .CodeMirror {
             height: 100% !important;
-            font-size: 14px;
-            line-height: 1.5;
+            font-size: 13px;
+            line-height: 1.6;
         }
-        
+
         .pdf-preview {
             width: 100%;
             height: 100%;
             border: none;
         }
-        
+
         .preview-message {
             text-align: center;
-            color: #666;
-            font-size: 16px;
+            color: #71717a;
+            font-size: 14px;
+            padding: 20px;
         }
-        
-        .actions {
-            padding: 15px 20px;
-            background: #333;
-            border-top: 1px solid #404040;
+
+        .editor-footer {
+            padding: 14px 24px;
+            background: rgba(255,255,255,0.02);
+            border-top: 1px solid rgba(255,255,255,0.06);
             display: flex;
             gap: 10px;
             justify-content: center;
+            flex-wrap: wrap;
         }
-        
-        .file-upload {
-            position: relative;
-            display: inline-block;
-            margin-bottom: 10px;
-        }
-        
-        .file-upload input[type=file] {
-            position: absolute;
-            opacity: 0;
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
-        }
-        
-        .file-upload .btn {
-            display: inline-block;
-        }
-        
-        .loading {
+
+        /* ── Spinner ── */
+        .spinner {
             display: inline-flex;
             align-items: center;
             gap: 8px;
         }
-        
-        .loading::after {
+
+        .spinner::after {
             content: '';
             width: 16px;
             height: 16px;
-            border: 2px solid #ccc;
-            border-top: 2px solid #4fc3f7;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-top: 2px solid #fff;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            animation: spin 0.8s linear infinite;
         }
-        
+
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* ── Footer ── */
+        .footer {
+            text-align: center;
+            padding: 24px;
+            color: #3f3f46;
+            font-size: 13px;
+            border-top: 1px solid rgba(255,255,255,0.04);
+            margin-top: auto;
+        }
+
+        .footer a {
+            color: #60a5fa;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 900px) {
+            .input-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .workflow-steps {
+                grid-template-columns: 1fr;
+            }
+
+            .editor-main {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .editor-panel,
+            .preview-panel {
+                width: 100%;
+            }
+
+            .editor-panel {
+                border-right: none;
+                border-bottom: 1px solid rgba(255,255,255,0.06);
+            }
+
+            .preview-panel {
+                min-height: 400px;
+            }
+
+            .CodeMirror {
+                min-height: 350px;
+            }
+
+            .header h1 { font-size: 22px; }
+
+            .editor-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
     <div class="header">
-        <h1>🚀 Resume Agent</h1>
+        <h1>Resume Agent</h1>
+        <p>AI-powered resume tailoring for every opportunity</p>
     </div>
-    
+
     <div class="container">
-        <!-- How It Works Section -->
-        <div class="workflow-section">
-            <h2 class="section-title">📖 How Resume Agent Works</h2>
-            <div class="workflow-explanation">
-                <div class="workflow-step">
-                    <div class="step-icon">1️⃣</div>
-                    <div class="step-content">
-                        <h3>Start with Your Master CV</h3>
-                        <p>Upload a comprehensive YAML CV containing <strong>all</strong> your experiences, skills, projects, and achievements. This serves as your complete professional profile that the AI will draw from.</p>
-                    </div>
-                </div>
-                <div class="workflow-step">
-                    <div class="step-icon">2️⃣</div>
-                    <div class="step-content">
-                        <h3>AI Tailors Your Resume</h3>
-                        <p>Provide the job advertisement, and our AI will analyze the requirements and automatically tailor your master CV - selecting relevant experiences, optimizing descriptions, and reordering sections to match the role.</p>
-                    </div>
-                </div>
-                <div class="workflow-step">
-                    <div class="step-icon">3️⃣</div>
-                    <div class="step-content">
-                        <h3>Human Final Touch</h3>
-                        <p>Review the AI-tailored version and make final edits as needed. You have full control to adjust wording, add specific details, or modify the content to perfectly match your style and the opportunity.</p>
-                    </div>
-                </div>
+        <!-- How It Works (collapsible) -->
+        <div class="card">
+            <div class="how-it-works-toggle" onclick="toggleHowItWorks()">
+                <h2 class="section-title" style="margin-bottom:0;">
+                    <span class="icon icon-purple">?</span>
+                    How It Works
+                </h2>
+                <span class="chevron" id="how-chevron">&#9660;</span>
             </div>
-            <div class="workflow-tip">
-                💡 <strong>Pro Tip:</strong> Keep your master CV comprehensive and up-to-date. The more complete information you provide, the better the AI can tailor each resume for specific opportunities.
+            <div class="collapsible-content" id="how-it-works-content">
+                <div class="workflow-steps" style="margin-top:20px;">
+                    <div class="workflow-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h3>Upload Your Master CV</h3>
+                            <p>Provide a comprehensive YAML CV with all your experiences, skills, projects, and achievements.</p>
+                        </div>
+                    </div>
+                    <div class="workflow-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h3>AI Tailors Your Resume</h3>
+                            <p>Paste the job ad and our AI analyzes requirements, selects relevant content, and optimizes descriptions.</p>
+                        </div>
+                    </div>
+                    <div class="workflow-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h3>Review &amp; Download</h3>
+                            <p>Fine-tune the AI output with the live editor, preview the PDF in real-time, then download your tailored resume.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="workflow-tip">
+                    <strong>Tip:</strong> Keep your master CV comprehensive and up-to-date. The more complete information you provide, the better the AI can tailor each resume.
+                </div>
             </div>
         </div>
-        
+
         <!-- Input Section -->
-        <div class="workflow-section">
-            <h2 class="section-title">📋 Step 1: Input Your Data</h2>
-            
-            <div class="input-group">
-                <label for="master-cv">Master CV (YAML format):</label>
-                <div style="font-size: 14px; color: #999; margin-bottom: 10px;">
-                    💡 Don't have your own YAML file? Try uploading the <strong>master_CV_template.yaml</strong> file from the project folder as a starting point.
+        <div class="card">
+            <h2 class="section-title">
+                <span class="icon icon-blue">1</span>
+                Input Your Data
+            </h2>
+
+            <div class="input-grid">
+                <div class="input-group">
+                    <label for="master-cv">Master CV (YAML format)</label>
+                    <div class="input-hint">
+                        Don't have a YAML file? Upload the <strong>master_CV_template.yaml</strong> from the project folder.
+                    </div>
+                    <div class="file-drop-zone" id="cv-drop-zone">
+                        <input type="file" id="cv-file" accept=".yaml,.yml" />
+                        <div class="file-drop-icon">&#128196;</div>
+                        <div class="file-drop-text">Drag &amp; drop your <strong>.yaml</strong> file here, or click to browse</div>
+                        <div class="file-drop-hint">Accepts .yaml and .yml files</div>
+                        <div class="file-name-display" id="file-name-display"></div>
+                    </div>
+                    <textarea id="master-cv" placeholder="Or paste your master CV YAML here..."></textarea>
                 </div>
-                <div class="file-upload">
-                    <input type="file" id="cv-file" accept=".yaml,.yml" />
-                    <button class="btn btn-secondary">Upload CV File</button>
+
+                <div class="input-group">
+                    <label for="job-ad">Job Advertisement</label>
+                    <div class="input-hint">Paste the full job posting including requirements, responsibilities, and qualifications.</div>
+                    <textarea id="job-ad" placeholder="Paste the job advertisement text here..."></textarea>
                 </div>
-                <textarea id="master-cv" placeholder="Paste your master CV YAML here or upload a file above..."></textarea>
             </div>
-            
-            <div class="input-group">
-                <label for="job-ad">Job Advertisement:</label>
-                <textarea id="job-ad" placeholder="Paste the job advertisement text here..."></textarea>
-            </div>
-            
-            <div style="text-align: center; margin-top: 20px;">
-                <button class="btn" id="process-btn" onclick="startAIProcessing()">
-                    🤖 Process with AI
+
+            <div class="btn-center">
+                <button class="btn btn-primary" id="process-btn" onclick="startAIProcessing()">
+                    Process with AI
                 </button>
             </div>
         </div>
-        
+
         <!-- Progress Section -->
         <div class="progress-section" id="progress-section">
-            <h2 class="section-title">⚙️ AI Processing Progress</h2>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progress-fill"></div>
+            <div class="progress-card">
+                <h2 class="section-title">
+                    <span class="icon icon-amber">&#9881;</span>
+                    AI Processing
+                </h2>
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="progress-fill"></div>
+                </div>
+                <div class="progress-message" id="progress-message">Initializing...</div>
+                <div class="progress-steps" id="progress-steps">
+                    <div class="progress-step-dot" data-step="parse_job_ad"></div>
+                    <div class="progress-step-dot" data-step="reorder_sections"></div>
+                    <div class="progress-step-dot" data-step="tailor_summary_and_skills"></div>
+                    <div class="progress-step-dot" data-step="tailor_experience"></div>
+                    <div class="progress-step-dot" data-step="tailor_projects"></div>
+                    <div class="progress-step-dot" data-step="tailor_education"></div>
+                    <div class="progress-step-dot" data-step="tailor_certifications"></div>
+                    <div class="progress-step-dot" data-step="tailor_extracurricular"></div>
+                    <div class="progress-step-dot" data-step="validate_yaml"></div>
+                </div>
             </div>
-            <div class="progress-message" id="progress-message">Initializing...</div>
         </div>
-        
+
         <!-- Editor Section -->
         <div class="editor-section" id="editor-section">
             <div class="editor-header">
-                <h2 class="section-title">✏️ Step 2: Final Editing</h2>
-                <div style="display: flex; gap: 15px; align-items: center;">
-                    <div class="editor-status" id="editor-status">Ready</div>
+                <div class="editor-header-left">
+                    <h2 class="section-title" style="margin-bottom:0;">
+                        <span class="icon icon-green">2</span>
+                        Final Editing
+                    </h2>
+                    <div class="editor-status info" id="editor-status">Ready</div>
+                </div>
+                <div class="editor-header-right">
+                    <button class="btn btn-download" onclick="downloadYAML()" title="Download YAML">
+                        &#11123; Download YAML
+                    </button>
+                    <button class="btn btn-secondary" onclick="downloadFromServer()" title="Download from server">
+                        &#128190; Save to Disk
+                    </button>
                 </div>
             </div>
-            
+
             <div class="editor-main">
                 <div class="editor-panel">
                     <textarea id="yaml-editor">{{ working_cv_content }}</textarea>
                 </div>
-                
+
                 <div class="preview-panel">
                     <div class="preview-message" id="preview-message">
                         Make edits to see your CV preview
@@ -817,13 +1218,20 @@ UI_HTML = """
                     <iframe class="pdf-preview" id="pdf-preview" style="display: none;"></iframe>
                 </div>
             </div>
-            
-            <div class="actions">
-                <button class="btn btn-secondary" onclick="downloadYAML()">
-                    📄 Download YAML
+
+            <div class="editor-footer">
+                <button class="btn btn-secondary" onclick="saveAndRender()">
+                    &#8635; Re-render Preview
+                </button>
+                <button class="btn btn-download" onclick="downloadYAML()">
+                    &#11123; Download YAML
                 </button>
             </div>
         </div>
+    </div>
+
+    <div class="footer">
+        Resume Agent &mdash; Built with LangGraph &amp; RenderCV
     </div>
 
     <script>
@@ -831,8 +1239,43 @@ UI_HTML = """
         let editor;
         let saveTimeout;
         let isRendering = false;
-        
-        // Initialize CodeMirror when editor section becomes visible
+        const completedSteps = new Set();
+
+        /* ── Toast System ── */
+        function showToast(message, type = 'info', duration = 4000) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast toast-' + type;
+
+            const icons = { success: '&#10003;', error: '&#10007;', info: '&#8505;' };
+            toast.innerHTML =
+                '<span class="toast-icon">' + (icons[type] || icons.info) + '</span>' +
+                '<span class="toast-text">' + message + '</span>' +
+                '<button class="toast-close" onclick="dismissToast(this)">&times;</button>';
+
+            container.appendChild(toast);
+
+            if (duration > 0) {
+                setTimeout(function() { dismissToast(toast.querySelector('.toast-close')); }, duration);
+            }
+        }
+
+        function dismissToast(btn) {
+            const toast = btn.closest('.toast');
+            if (!toast || toast.classList.contains('hiding')) return;
+            toast.classList.add('hiding');
+            setTimeout(function() { toast.remove(); }, 300);
+        }
+
+        /* ── Collapsible How-it-Works ── */
+        function toggleHowItWorks() {
+            const content = document.getElementById('how-it-works-content');
+            const chevron = document.getElementById('how-chevron');
+            content.classList.toggle('open');
+            chevron.classList.toggle('open');
+        }
+
+        /* ── Initialize CodeMirror ── */
         function initializeEditor() {
             if (!editor) {
                 editor = CodeMirror.fromTextArea(document.getElementById('yaml-editor'), {
@@ -845,236 +1288,262 @@ UI_HTML = """
                     autoCloseBrackets: true,
                     matchBrackets: true
                 });
-                
-                // Auto-save with smart debouncing for real-time rendering
+
                 editor.on('change', function() {
                     setEditorStatus('Editing...', 'info');
-                    
                     clearTimeout(saveTimeout);
-                    saveTimeout = setTimeout(() => {
-                        saveAndRender();
-                    }, 1500); // Optimized for real-time with smart caching
+                    saveTimeout = setTimeout(function() { saveAndRender(); }, 1500);
                 });
             }
         }
-        
-        // File upload handler
-        document.getElementById('cv-file').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
+
+        /* ── Drag & Drop File Upload ── */
+        (function() {
+            const dropZone = document.getElementById('cv-drop-zone');
+            const fileInput = document.getElementById('cv-file');
+            const nameDisplay = document.getElementById('file-name-display');
+
+            ['dragenter','dragover'].forEach(function(evt) {
+                dropZone.addEventListener(evt, function(e) {
+                    e.preventDefault();
+                    dropZone.classList.add('drag-over');
+                });
+            });
+
+            ['dragleave','drop'].forEach(function(evt) {
+                dropZone.addEventListener(evt, function(e) {
+                    e.preventDefault();
+                    dropZone.classList.remove('drag-over');
+                });
+            });
+
+            dropZone.addEventListener('drop', function(e) {
+                const files = e.dataTransfer.files;
+                if (files.length) handleFile(files[0]);
+            });
+
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files.length) handleFile(e.target.files[0]);
+            });
+
+            function handleFile(file) {
+                if (!file.name.match(/\\.ya?ml$/i)) {
+                    showToast('Please upload a .yaml or .yml file', 'error');
+                    return;
+                }
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     document.getElementById('master-cv').value = e.target.result;
+                    nameDisplay.textContent = '&#10003; ' + file.name;
+                    nameDisplay.style.display = 'block';
+                    showToast('File loaded: ' + file.name, 'success');
                 };
                 reader.readAsText(file);
             }
-        });
-        
-        // AI Processing
+        })();
+
+        /* ── AI Processing ── */
         function startAIProcessing() {
             const masterCV = document.getElementById('master-cv').value.trim();
             const jobAd = document.getElementById('job-ad').value.trim();
-            
+
             if (!masterCV) {
-                alert('Please provide your master CV in YAML format');
+                showToast('Please provide your master CV in YAML format', 'error');
                 return;
             }
-            
             if (!jobAd) {
-                alert('Please provide the job advertisement text');
+                showToast('Please provide the job advertisement text', 'error');
                 return;
             }
-            
-            // Save master CV
+
+            const btn = document.getElementById('process-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner">Processing</span>';
+            completedSteps.clear();
+            document.querySelectorAll('.progress-step-dot').forEach(function(d) {
+                d.className = 'progress-step-dot';
+            });
+
             fetch('/api/save-master-cv', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ yaml: masterCV })
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert('Error saving master CV: ' + data.error);
-                    return;
-                }
-                
-                // Save job advertisement
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.error) { throw new Error(data.error); }
                 return fetch('/api/save-job-ad', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ job_ad: jobAd })
                 });
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert('Error saving job advertisement: ' + data.error);
-                    return;
-                }
-                
-                // Start AI workflow
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.error) { throw new Error(data.error); }
                 return fetch('/api/start-workflow', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert('Error starting workflow: ' + data.error);
-                    return;
-                }
-                
-                // Show progress section
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.error) { throw new Error(data.error); }
                 document.getElementById('progress-section').style.display = 'block';
-                document.getElementById('process-btn').disabled = true;
-                document.getElementById('process-btn').innerHTML = '<span class="loading">Processing...</span>';
+                document.getElementById('progress-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                showToast('AI processing started', 'info');
             })
-            .catch(error => {
-                alert('Network error: ' + error.message);
+            .catch(function(error) {
+                showToast(error.message, 'error', 6000);
+                resetProcessBtn();
             });
         }
-        
-        // Socket.IO event handlers
+
+        function resetProcessBtn() {
+            const btn = document.getElementById('process-btn');
+            btn.disabled = false;
+            btn.innerHTML = 'Process with AI';
+        }
+
+        /* ── Socket.IO handlers ── */
         socket.on('workflow_progress', function(data) {
             document.getElementById('progress-fill').style.width = (data.progress || 0) + '%';
             document.getElementById('progress-message').textContent = data.message;
+
+            if (data.step) {
+                completedSteps.add(data.step);
+                document.querySelectorAll('.progress-step-dot').forEach(function(dot) {
+                    if (completedSteps.has(dot.dataset.step)) {
+                        dot.className = 'progress-step-dot completed';
+                    } else if (dot.dataset.step === data.step) {
+                        dot.className = 'progress-step-dot active';
+                    }
+                });
+            }
         });
-        
+
         socket.on('workflow_complete', function(data) {
-            document.getElementById('progress-message').textContent = 'AI processing complete! Loading editor...';
             document.getElementById('progress-fill').style.width = '100%';
-            
-            // Load working CV and show editor
+            document.getElementById('progress-message').textContent = 'Complete! Loading editor...';
+            document.querySelectorAll('.progress-step-dot').forEach(function(d) {
+                d.className = 'progress-step-dot completed';
+            });
+
             fetch('/api/load-working-cv')
-                .then(response => response.text())
-                .then(workingCV => {
+                .then(function(r) { return r.text(); })
+                .then(function(workingCV) {
                     document.getElementById('yaml-editor').value = workingCV;
                     document.getElementById('editor-section').style.display = 'block';
                     initializeEditor();
-                    
-                    // Hide progress section after a delay
-                    setTimeout(() => {
+                    editor.setValue(workingCV);
+
+                    setTimeout(function() {
                         document.getElementById('progress-section').style.display = 'none';
-                    }, 2000);
-                    
-                    // Re-enable process button
-                    document.getElementById('process-btn').disabled = false;
-                    document.getElementById('process-btn').innerHTML = '🤖 Process with AI';
+                        document.getElementById('editor-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 1500);
+
+                    resetProcessBtn();
+                    showToast('Resume tailored successfully!', 'success', 5000);
+
+                    setTimeout(function() {
+                        if (editor) { saveAndRender(); }
+                    }, 500);
                 });
         });
-        
+
         socket.on('workflow_error', function(data) {
-            alert('Workflow Error: ' + data.error);
+            showToast('Workflow error: ' + data.error, 'error', 8000);
             document.getElementById('progress-section').style.display = 'none';
-            document.getElementById('process-btn').disabled = false;
-            document.getElementById('process-btn').innerHTML = '🤖 Process with AI';
+            resetProcessBtn();
         });
-        
-        // Editor functions
-        function setEditorStatus(message, type = 'info') {
-            const statusEl = document.getElementById('editor-status');
-            statusEl.textContent = message;
-            statusEl.className = 'editor-status ' + type;
+
+        /* ── Editor helpers ── */
+        function setEditorStatus(message, type) {
+            var el = document.getElementById('editor-status');
+            el.textContent = message;
+            el.className = 'editor-status ' + (type || 'info');
         }
-        
-        function showPreviewMessage(message) {
-            const previewMessage = document.getElementById('preview-message');
-            const pdfPreview = document.getElementById('pdf-preview');
-            
-            previewMessage.textContent = message;
-            previewMessage.style.display = 'block';
-            pdfPreview.style.display = 'none';
+
+        function showPreviewMessage(msg) {
+            document.getElementById('preview-message').textContent = msg;
+            document.getElementById('preview-message').style.display = 'block';
+            document.getElementById('pdf-preview').style.display = 'none';
         }
-        
+
         function showPDF(url) {
-            const previewMessage = document.getElementById('preview-message');
-            const pdfPreview = document.getElementById('pdf-preview');
-            
-            pdfPreview.src = url;
-            pdfPreview.style.display = 'block';
-            previewMessage.style.display = 'none';
+            document.getElementById('pdf-preview').src = url;
+            document.getElementById('pdf-preview').style.display = 'block';
+            document.getElementById('preview-message').style.display = 'none';
         }
-        
+
         function saveAndRender() {
             if (isRendering || !editor) return;
-            
             isRendering = true;
-            setEditorStatus('Checking for changes...', 'info');
-            
-            const yamlContent = editor.getValue();
-            
+            setEditorStatus('Rendering...', 'info');
+
             fetch('/api/save-working-cv', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ yaml: yamlContent })
+                body: JSON.stringify({ yaml: editor.getValue() })
             })
-            .then(response => response.json())
-            .then(data => {
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
                 isRendering = false;
-                
                 if (data.success) {
                     if (data.render && data.render.success) {
-                        // Check if result was cached (no changes detected)
-                        if (data.render.cached) {
-                            setEditorStatus('✅ No changes detected', 'success');
-                        } else {
-                            setEditorStatus('✅ Changes rendered', 'success');
-                        }
+                        setEditorStatus(data.render.cached ? 'Up to date' : 'Rendered', 'success');
                         showPDF(data.render.pdf_url);
                     } else if (data.render && data.render.error) {
                         if (data.render.error.includes('in progress')) {
-                            setEditorStatus('⏳ Rendering...', 'info');
-                            showPreviewMessage('🔄 Rendering changes...');
-                            // Retry after a short delay
-                            setTimeout(() => {
-                                if (!isRendering) saveAndRender();
-                            }, 1500);
+                            setEditorStatus('Rendering...', 'info');
+                            showPreviewMessage('Rendering changes...');
+                            setTimeout(function() { if (!isRendering) saveAndRender(); }, 1500);
                         } else {
-                            setEditorStatus('❌ Render error', 'error');
-                            showPreviewMessage('❌ ' + data.render.error);
+                            setEditorStatus('Render error', 'error');
+                            showPreviewMessage(data.render.error);
                         }
                     }
                 } else {
-                    setEditorStatus('❌ Save error: ' + data.error, 'error');
-                    showPreviewMessage('❌ ' + data.error);
+                    setEditorStatus('Save error', 'error');
+                    showPreviewMessage(data.error);
                 }
             })
-            .catch(error => {
+            .catch(function(err) {
                 isRendering = false;
-                setEditorStatus('❌ Network error', 'error');
-                showPreviewMessage('❌ Network error: ' + error.message);
+                setEditorStatus('Network error', 'error');
+                showPreviewMessage('Network error: ' + err.message);
             });
         }
-        
+
+        /* ── Download Functions ── */
         function downloadYAML() {
             if (!editor) return;
-            
-            const yamlContent = editor.getValue();
-            const blob = new Blob([yamlContent], { type: 'text/yaml' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
+            var content = editor.getValue();
+            var blob = new Blob([content], { type: 'text/yaml' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
             a.href = url;
             a.download = 'tailored_resume.yaml';
             a.click();
             URL.revokeObjectURL(url);
+            showToast('YAML file downloaded', 'success');
         }
-        
 
-        
-        // Initialize editor if working CV is already available
-        if (document.getElementById('yaml-editor').value.trim() && 
-            !document.getElementById('yaml-editor').value.includes('No working CV available')) {
+        function downloadFromServer() {
+            window.location.href = '/api/download-yaml';
+        }
+
+        /* ── Init on load ── */
+        var yamlEl = document.getElementById('yaml-editor');
+        if (yamlEl.value.trim() && yamlEl.value.indexOf('No working CV available') === -1) {
             document.getElementById('editor-section').style.display = 'block';
             initializeEditor();
-            
-            // Automatically render the preview since we have existing content
-            setTimeout(() => {
+            setTimeout(function() {
                 if (editor) {
-                    setEditorStatus('Rendering existing CV...', 'info');
+                    setEditorStatus('Rendering...', 'info');
                     saveAndRender();
                 }
-            }, 500); // Small delay to ensure editor is fully initialized
+            }, 500);
         }
     </script>
 </body>
@@ -1141,8 +1610,20 @@ def serve_pdf(timestamp):
         pdf_path = ui.current_render['pdf_path']
         if os.path.exists(pdf_path):
             return send_file(pdf_path, mimetype='application/pdf')
-    
+
     return "PDF not found", 404
+
+@app.route('/api/download-yaml')
+def download_yaml():
+    """Download the working CV YAML file."""
+    if os.path.exists(ui.working_cv_file):
+        return send_file(
+            os.path.abspath(ui.working_cv_file),
+            mimetype='text/yaml',
+            as_attachment=True,
+            download_name='tailored_resume.yaml'
+        )
+    return jsonify({"error": "No working CV file available"}), 404
 
 
 

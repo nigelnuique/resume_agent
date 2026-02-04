@@ -18,11 +18,10 @@ from state import ResumeState, create_initial_state, save_cv_to_file, load_cv_fr
 # Import all workflow nodes
 from nodes.parse_job_ad import parse_job_ad
 from nodes.reorder_sections import reorder_sections
-from nodes.update_summary import update_summary
+from nodes.tailor_summary_and_skills import tailor_summary_and_skills
 from nodes.tailor_experience import tailor_experience
 from nodes.tailor_projects import tailor_projects
 from nodes.tailor_education import tailor_education
-from nodes.tailor_skills import tailor_skills
 from nodes.tailor_certifications import tailor_certifications
 from nodes.tailor_extracurricular import tailor_extracurricular
 from nodes.validate_yaml import validate_yaml
@@ -42,11 +41,10 @@ def setup_workflow() -> StateGraph:
     # Add all processing nodes
     workflow.add_node("parse_job_ad", parse_job_ad)
     workflow.add_node("reorder_sections", reorder_sections)
-    workflow.add_node("update_summary", update_summary)
+    workflow.add_node("tailor_summary_and_skills", tailor_summary_and_skills)
     workflow.add_node("tailor_experience", tailor_experience)
     workflow.add_node("tailor_projects", tailor_projects)
     workflow.add_node("tailor_education", tailor_education)
-    workflow.add_node("tailor_skills", tailor_skills)
     workflow.add_node("tailor_certifications", tailor_certifications)
     workflow.add_node("tailor_extracurricular", tailor_extracurricular)
     workflow.add_node("validate_yaml", validate_yaml)
@@ -54,12 +52,11 @@ def setup_workflow() -> StateGraph:
     # Define the workflow sequence
     workflow.add_edge(START, "parse_job_ad")
     workflow.add_edge("parse_job_ad", "reorder_sections")
-    workflow.add_edge("reorder_sections", "update_summary")
-    workflow.add_edge("update_summary", "tailor_experience")
+    workflow.add_edge("reorder_sections", "tailor_summary_and_skills")
+    workflow.add_edge("tailor_summary_and_skills", "tailor_experience")
     workflow.add_edge("tailor_experience", "tailor_projects")
     workflow.add_edge("tailor_projects", "tailor_education")
-    workflow.add_edge("tailor_education", "tailor_skills")
-    workflow.add_edge("tailor_skills", "tailor_certifications")
+    workflow.add_edge("tailor_education", "tailor_certifications")
     workflow.add_edge("tailor_certifications", "tailor_extracurricular")
     workflow.add_edge("tailor_extracurricular", "validate_yaml")
     workflow.add_edge("validate_yaml", END)
@@ -247,11 +244,11 @@ def print_summary(state: ResumeState) -> None:
     processing_steps = [
         ('job_parsed', 'Job requirements parsed'),
         ('sections_reordered', 'Sections reordered'),
-        ('summary_updated', 'Professional summary updated'),
+        ('summary_updated', 'Professional summary and skills tailored'),
+        ('skills_tailored', 'Professional summary and skills tailored'),
         ('experience_tailored', 'Experience section tailored'),
         ('projects_tailored', 'Projects section tailored'),
         ('education_tailored', 'Education section tailored'),
-        ('skills_tailored', 'Skills section tailored'),
         ('certifications_tailored', 'Certifications tailored'),
         ('extracurricular_tailored', 'Extracurricular activities tailored'),
         ('yaml_validated', 'YAML structure validated')
