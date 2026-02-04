@@ -1,9 +1,9 @@
 # Resume Agent - AI-Powered Resume Tailoring System
 
-> 🤖 An intelligent resume tailoring system that automatically customizes your CV based on job advertisements using a modern web interface powered by LangGraph and OpenAI's GPT-4.
+> 🤖 An intelligent resume tailoring system that automatically customizes your CV based on job advertisements using a modern web interface powered by LangGraph and OpenAI's GPT-5 series.
 
 [![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
-[![OpenAI GPT-4](https://img.shields.io/badge/OpenAI-GPT--4-green.svg)](https://openai.com/)
+[![OpenAI GPT-5](https://img.shields.io/badge/OpenAI-GPT--5-green.svg)](https://openai.com/)
 [![RenderCV](https://img.shields.io/badge/RenderCV-Compatible-orange.svg)](https://rendercv.com/)
 
 ## Table of Contents
@@ -50,11 +50,12 @@ Resume Agent uses a sophisticated multi-step AI workflow to analyze job advertis
 ### 🌐 **Complete Web Interface**
 - **Modern UI**: Clean, intuitive web-based interface
 - **Progress Tracking**: Real-time updates during AI processing
-- **Integrated Editor**: Built-in YAML editor with syntax highlighting
-- **Live Preview**: Real-time PDF preview as you edit
+- **Form-Based Editor**: Structured form with accordion sections for each CV part (no raw YAML editing required)
+- **Live Preview**: Real-time PDF preview as you edit form fields
 - **File Upload**: Drag-and-drop CV file upload
 - **Easy Downloads**: One-click download of YAML and PDF files
-- **Auto-save**: Automatic saving and rendering
+- **Auto-save**: Automatic saving and rendering on form changes
+- **Raw YAML View**: Optional modal to inspect generated YAML
 - **Responsive Design**: Works on desktop and mobile devices
 
 ### 🎨 **Professional Output**
@@ -119,7 +120,6 @@ cp env_template.txt .env
 Your `.env` file should contain:
 ```env
 OPENAI_API_KEY=your-actual-api-key-here
-OPENAI_MODEL=gpt-4
 OPENAI_TEMPERATURE=0.3
 AUSTRALIAN_ENGLISH=false
 DEBUG=false
@@ -150,24 +150,25 @@ Resume Agent provides a comprehensive web-based interface for the complete resum
    - **Step 1**: Upload your master CV (YAML format) or paste it directly
    - **Step 2**: Paste the job advertisement text
    - **Step 3**: Click "Process with AI" and monitor real-time progress
-   - **Step 4**: Make final edits using the integrated YAML editor
+   - **Step 4**: Make final edits using the structured form editor
    - **Step 5**: Download your tailored resume (YAML and PDF)
 
 **Web Interface Features**:
 - 🌐 **Modern Interface**: Clean, intuitive web-based UI
 - 📊 **Progress Tracking**: Real-time updates during AI processing
-- 📝 **Integrated Editor**: Built-in YAML editor with syntax highlighting
-- 👁️ **Live Preview**: Real-time PDF preview as you edit
+- 📝 **Form-Based Editor**: Structured form with collapsible sections for personal info, experience, education, projects, skills, certifications, and extracurricular activities
+- 👁️ **Live Preview**: Real-time PDF preview updates as you edit form fields
 - 📁 **File Upload**: Drag-and-drop CV file upload
 - 💾 **Easy Downloads**: One-click download of YAML and PDF files
-- 🔄 **Auto-save**: Automatic saving and rendering
+- 🔄 **Auto-save**: Automatic saving and rendering (1.5s debounce)
 - 📱 **Responsive**: Works on desktop and mobile devices
+- { } **Raw YAML View**: Optional modal to inspect the generated YAML
 
 **Workflow Steps**:
 1. **Upload Master CV**: Either upload a YAML file or use the provided template
 2. **Add Job Advertisement**: Paste the complete job posting text
 3. **AI Processing**: Watch real-time progress as AI analyzes and tailors your resume
-4. **Edit & Refine**: Use the integrated editor to make final adjustments
+4. **Edit & Refine**: Use the form-based editor to adjust fields, reorder entries, and add/remove highlights
 5. **Download Results**: Get both YAML and PDF versions of your tailored resume
 
 ## Configuration
@@ -179,7 +180,6 @@ Create a `.env` file with these options:
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `OPENAI_API_KEY` | ✅ Yes | - | Your OpenAI API key |
-| `OPENAI_MODEL` | No | `gpt-4` | Model for content generation |
 | `OPENAI_TEMPERATURE` | No | `0.3` | Response randomness (0.0-1.0) |
 | `AUSTRALIAN_ENGLISH` | No | `false` | Use Australian spelling |
 | `DEBUG` | No | `false` | Enable debug logging |
@@ -210,17 +210,21 @@ AUSTRALIAN_ENGLISH=true
 ```
 Resume_Agent/
 ├── 📁 nodes/                    # LangGraph workflow nodes
-│   ├── parse_job_ad.py         # Job advertisement analysis
-│   ├── reorder_sections.py     # Section prioritization
-│   ├── update_summary.py       # Professional summary tailoring
-│   ├── tailor_*.py             # Content tailoring nodes
-│   ├── validate_yaml.py        # YAML validation
-│   └── json_utils.py           # Utility functions
+│   ├── parse_job_ad.py         # Job advertisement analysis (gpt-5-nano)
+│   ├── reorder_sections.py     # Section prioritization (gpt-5-nano)
+│   ├── tailor_summary_and_skills.py  # Summary + skills tailoring (gpt-5.2)
+│   ├── tailor_experience.py    # Experience optimization (gpt-5.2)
+│   ├── tailor_projects.py      # Project selection (gpt-5.2)
+│   ├── tailor_education.py     # Education tailoring (gpt-5-nano)
+│   ├── tailor_certifications_and_extracurricular.py  # Certs + activities (gpt-5-nano)
+│   ├── validate_yaml.py        # YAML validation (no LLM)
+│   └── json_utils.py           # JSON parsing utilities
 ├── 📁 utils/                    # Shared utilities
 │   └── text_utils.py           # Text processing utilities
 ├── 📁 markdown/                 # RenderCV templates
 ├── 📁 rendercv_output/          # Generated CV files
-├── 🌐 resume_agent_ui.py       # Web interface application
+├── 🌐 resume_agent_ui.py       # Web interface (form-based editor + PDF preview)
+├── 🐍 run.py                   # Workflow orchestration
 ├── 🐍 start_ui.py              # Web UI launcher
 ├── 🐍 state.py                 # State management
 ├── 📋 requirements.txt         # Python dependencies
@@ -232,15 +236,15 @@ Resume_Agent/
 ```mermaid
 graph TD
     A[Web Interface] --> B[Upload CV + Job Ad]
-    B --> C[Parse Job Ad]
-    C --> D[Reorder Sections]
-    D --> E[Update Summary]
-    E --> F[Tailor Experience]
-    F --> G[Tailor Projects]
-    G --> H[Tailor Education]
-    H --> I[Tailor Skills]
-    I --> J[Validate YAML]
-    J --> K[Render CV]
+    B --> C[Parse Job Ad - gpt-5-nano]
+    C --> D[Reorder Sections - gpt-5-nano]
+    D --> E[Tailor Summary & Skills - gpt-5.2]
+    E --> F[Tailor Experience - gpt-5.2]
+    F --> G[Tailor Projects - gpt-5.2]
+    G --> H[Tailor Education - gpt-5-nano]
+    H --> I[Tailor Certifications & Extracurricular - gpt-5-nano]
+    I --> J[Validate YAML - no LLM]
+    J --> K[Form Editor + Live PDF Preview]
     K --> L[Download PDF/YAML]
 ```
 
@@ -265,7 +269,7 @@ Resume Agent implements comprehensive safeguards to ensure truthful and accurate
 ### ⚙️ Technical Safeguards
 
 - **Prompt Optimization**: Reusable prompts that work for any candidate background
-- **Model Selection**: GPT-4 for content generation, GPT-3.5-turbo for job analysis
+- **Model Selection**: GPT-5.2 for quality-critical content generation, GPT-5-nano for analysis and filtering tasks
 - **Token Management**: Efficient prompting to minimize costs while maintaining quality
 - **Error Handling**: Comprehensive error recovery and logging
 

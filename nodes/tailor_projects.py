@@ -77,7 +77,7 @@ JOB_REQUIREMENTS = {{
 """
         
         response = client.chat.completions.create(
-            model="gpt-4",  # Use GPT-4 for better truthfulness
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are an expert resume writer who prioritizes TRUTHFULNESS. Never add inflated claims about professional collaboration or production deployment for academic/personal projects. Focus on actual technical skills demonstrated."},
                 {"role": "user", "content": prompt}

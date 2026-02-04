@@ -4,7 +4,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://www.python.org/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-Workflow-green.svg)](https://langchain-ai.github.io/langgraph/)
-[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4-red.svg)](https://openai.com/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--5-red.svg)](https://openai.com/)
 
 ## Table of Contents
 
@@ -44,7 +44,7 @@ graph TB
     
     subgraph "AI Services"
         E1[OpenAI API]
-        E2[GPT-4 Models]
+        E2[GPT-5 Models]
         E3[Prompt Management]
     end
 ```
@@ -64,26 +64,23 @@ graph TB
 ```
 resume_agent/
 ├── 📁 nodes/                    # Workflow processing nodes
-│   ├── __init__.py             # Node package initialization
 │   ├── json_utils.py           # JSON parsing utilities
-│   ├── parse_job_ad.py         # Job advertisement analysis
-│   ├── reorder_sections.py     # Section prioritization logic
-│   ├── update_summary.py       # Professional summary tailoring
-│   ├── tailor_experience.py    # Experience section optimization
-│   ├── tailor_projects.py      # Project section tailoring
-│   ├── tailor_education.py     # Education section optimization
-│   ├── tailor_skills.py        # Skills section tailoring
-│   ├── tailor_certifications.py # Certification prioritization
-│   ├── tailor_extracurricular.py # Extracurricular activities
-│   └── validate_yaml.py        # YAML structure validation
+│   ├── parse_job_ad.py         # Job advertisement analysis (gpt-5-nano)
+│   ├── reorder_sections.py     # Section prioritization (gpt-5-nano)
+│   ├── tailor_summary_and_skills.py  # Summary + skills (gpt-5.2)
+│   ├── tailor_experience.py    # Experience optimization (gpt-5.2)
+│   ├── tailor_projects.py      # Project selection (gpt-5.2)
+│   ├── tailor_education.py     # Education tailoring (gpt-5-nano)
+│   ├── tailor_certifications_and_extracurricular.py  # Certs + activities (gpt-5-nano)
+│   └── validate_yaml.py        # YAML structure validation (no LLM)
 ├── 📁 utils/                   # Shared utilities
 │   ├── __init__.py            # Utils package initialization
-
 │   └── text_utils.py          # Text processing functions
 ├── 📁 markdown/               # RenderCV template files
 ├── 📁 rendercv_output/        # Generated output files
 ├── 🐍 state.py               # State management and types
-├── 🌐 resume_agent_ui.py     # Web interface application
+├── 🐍 run.py                 # Workflow orchestration
+├── 🌐 resume_agent_ui.py     # Web interface (form-based editor)
 ├── 🐍 start_ui.py            # Web UI launcher
 └── 🐍 setup_env.py           # Environment setup utilities
 ```
@@ -140,9 +137,10 @@ stateDiagram-v2
     InitialState --> LoadedData: load_initial_data()
     LoadedData --> ParsedJob: parse_job_ad()
     ParsedJob --> ReorderedSections: reorder_sections()
-    ReorderedSections --> UpdatedSummary: update_summary()
-    UpdatedSummary --> TailoredContent: tailor_*()
-    TailoredContent --> ValidatedYAML: validate_yaml()
+    ReorderedSections --> SummaryAndSkills: tailor_summary_and_skills()
+    SummaryAndSkills --> TailoredContent: tailor_experience/projects/education()
+    TailoredContent --> CertsAndExtra: tailor_certifications_and_extracurricular()
+    CertsAndExtra --> ValidatedYAML: validate_yaml()
     ValidatedYAML --> [*]
 ```
 
@@ -172,15 +170,21 @@ def setup_workflow() -> StateGraph:
     """Set up the LangGraph workflow"""
     workflow = StateGraph(ResumeState)
     
-    # Add nodes
+    # Add nodes (8 total: 6 LLM calls + 1 validation + entry/exit)
     workflow.add_node("parse_job_ad", parse_job_ad)
     workflow.add_node("reorder_sections", reorder_sections)
-    # ... more nodes
-    
-    # Define edges
+    workflow.add_node("tailor_summary_and_skills", tailor_summary_and_skills)
+    workflow.add_node("tailor_experience", tailor_experience)
+    workflow.add_node("tailor_projects", tailor_projects)
+    workflow.add_node("tailor_education", tailor_education)
+    workflow.add_node("tailor_certifications_and_extracurricular", tailor_certifications_and_extracurricular)
+    workflow.add_node("validate_yaml", validate_yaml)
+
+    # Define sequential edges
+    workflow.add_edge(START, "parse_job_ad")
     workflow.add_edge("parse_job_ad", "reorder_sections")
-    workflow.add_edge("reorder_sections", "update_summary")
-    # ... more edges
+    workflow.add_edge("reorder_sections", "tailor_summary_and_skills")
+    # ... experience → projects → education → certs_and_extra → validate → END
     
     return workflow
 ```
@@ -299,7 +303,7 @@ import os
 
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
-def call_openai_api(prompt: str, model: str = "gpt-4") -> str:
+def call_openai_api(prompt: str, model: str = "gpt-5.2") -> str:
     """Call OpenAI API with error handling"""
     try:
         response = client.chat.completions.create(
@@ -369,9 +373,14 @@ def validate_ai_response(original_data: Dict, ai_response: Dict) -> bool:
 
 | Node | Model | Reason |
 |------|-------|---------|
-| `parse_job_ad` | GPT-3.5-turbo | Cost-effective for analysis |
-| Content tailoring | GPT-4 | Higher quality for creative tasks |
-| `validate_yaml` | GPT-3.5-turbo | Simple validation task |
+| `parse_job_ad` | GPT-5-nano | Cost-effective for structured extraction |
+| `reorder_sections` | GPT-5-nano | Simple structural decision |
+| `tailor_summary_and_skills` | GPT-5.2 | Critical quality gate with cross-validation |
+| `tailor_experience` | GPT-5.2 | Complex rewriting, anti-hallucination |
+| `tailor_projects` | GPT-5.2 | Technology accuracy, judgment-heavy |
+| `tailor_education` | GPT-5-nano | Factual reordering of highlights |
+| `tailor_certifications_and_extracurricular` | GPT-5-nano | Simple filtering of two lists |
+| `validate_yaml` | No LLM | Pure structural validation code |
 
 ## Testing Guide
 
@@ -466,7 +475,6 @@ def setup_environment():
     # Create .env file
     env_template = """
     OPENAI_API_KEY=your-api-key-here
-    OPENAI_MODEL=gpt-4
     OPENAI_TEMPERATURE=0.3
     AUSTRALIAN_ENGLISH=false
     DEBUG=false
@@ -569,9 +577,9 @@ CMD ["python", "start_ui.py"]
 
 2. **Update Workflow**
    ```python
-   # resume_agent_ui.py
+   # run.py
    from nodes.my_new_node import my_new_node
-   
+
    def setup_workflow():
        workflow.add_node("my_new_node", my_new_node)
        workflow.add_edge("previous_node", "my_new_node")

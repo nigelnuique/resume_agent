@@ -34,17 +34,20 @@ Watch the progress bar as the AI:
 ### Step 2: Final Editing
 
 Once AI processing completes:
-- **Left Panel**: Edit your resume YAML directly
-- **Right Panel**: Live PDF preview updates automatically
-- **Auto-save**: Changes save after 1.5 seconds of inactivity
+- **Left Panel**: Form-based editor with collapsible accordion sections for each part of your CV (personal info, summary, experience, education, projects, skills, certifications, extracurricular)
+- **Right Panel**: Live PDF preview updates automatically as you edit
+- **Auto-save**: Changes save and re-render after 1.5 seconds of inactivity
+- **Reorder**: Use up/down arrows to reorder experience, education, and project entries
+- **Add/Remove**: Add or remove entries, highlights, social networks, and skills inline
+- **Raw YAML**: Click "Show Raw YAML" to inspect the generated YAML in a modal
 - **Download**: Get your final resume in YAML and PDF formats
 
 ## Key Features
 
 ### 🔄 Real-time Updates
-- PDF preview refreshes as you type
-- Syntax highlighting for YAML
-- Error detection and highlighting
+- PDF preview refreshes as you edit form fields
+- Structured form inputs for each CV section
+- Accordion-style collapsible sections
 
 ### 📁 File Management
 - Upload CV files directly
@@ -70,10 +73,11 @@ Once AI processing completes:
 - Don't edit or summarize the job ad
 
 ### Final Editing
-- Review AI changes carefully
-- Adjust content for better flow
-- Ensure accuracy of all information
-- Check for any remaining placeholders
+- Review AI changes in each accordion section
+- Use the form fields to adjust content directly
+- Reorder entries with up/down arrow buttons
+- Add or remove highlights as needed
+- Click "Show Raw YAML" to verify the generated structure
 
 ## Troubleshooting
 
@@ -116,7 +120,7 @@ Once AI processing completes:
 ### API Limits
 - OpenAI has usage limits and costs
 - Monitor your API usage at platform.openai.com
-- Consider using GPT-3.5-turbo for cost savings (change in .env file)
+- The system uses GPT-5.2 for quality-critical tasks and GPT-5-nano for simpler tasks to balance cost and quality
 
 ## File Structure After Use
 

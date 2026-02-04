@@ -58,7 +58,7 @@ RESPONSE FORMAT (return ONLY valid JSON):
 IMPORTANT: Return ONLY the JSON object. No text before or after.
 """
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-5-nano",
             messages=[
                 {"role": "system", "content": "You are an expert resume editor."},
                 {"role": "user", "content": prompt},

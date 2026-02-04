@@ -42,7 +42,7 @@ def parse_job_ad(state: ResumeState) -> ResumeState:
         """
         
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-5-nano",
             messages=[
                 {"role": "system", "content": "You are an expert at analyzing job advertisements. Extract specific, actionable requirements for resume tailoring, with special focus on technical expertise and professional qualifications."},
                 {"role": "user", "content": prompt}

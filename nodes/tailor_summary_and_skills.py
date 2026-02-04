@@ -170,7 +170,7 @@ JOB_REQUIREMENTS = {{
 """
         
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are an expert resume writer who prioritizes TRUTHFULNESS and PERFECT ALIGNMENT between summary and skills sections. You must carefully analyze the candidate's actual work history and never claim professional experience in domains where they only have academic/project experience. Be honest about career transitions. CRITICAL: Ensure every technical skill mentioned in the summary appears prominently in the tailored skills section. NEVER mention programming languages, tools, or technologies that are not explicitly listed in the original skills section. Cross-reference every technical skill against their actual skills list. When in doubt, omit the skill rather than risk hallucination."},
                 {"role": "user", "content": prompt}

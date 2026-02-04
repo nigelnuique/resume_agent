@@ -22,8 +22,7 @@ from nodes.tailor_summary_and_skills import tailor_summary_and_skills
 from nodes.tailor_experience import tailor_experience
 from nodes.tailor_projects import tailor_projects
 from nodes.tailor_education import tailor_education
-from nodes.tailor_certifications import tailor_certifications
-from nodes.tailor_extracurricular import tailor_extracurricular
+from nodes.tailor_certifications_and_extracurricular import tailor_certifications_and_extracurricular
 from nodes.validate_yaml import validate_yaml
 
 def setup_workflow() -> StateGraph:
@@ -45,8 +44,7 @@ def setup_workflow() -> StateGraph:
     workflow.add_node("tailor_experience", tailor_experience)
     workflow.add_node("tailor_projects", tailor_projects)
     workflow.add_node("tailor_education", tailor_education)
-    workflow.add_node("tailor_certifications", tailor_certifications)
-    workflow.add_node("tailor_extracurricular", tailor_extracurricular)
+    workflow.add_node("tailor_certifications_and_extracurricular", tailor_certifications_and_extracurricular)
     workflow.add_node("validate_yaml", validate_yaml)
     
     # Define the workflow sequence
@@ -56,9 +54,8 @@ def setup_workflow() -> StateGraph:
     workflow.add_edge("tailor_summary_and_skills", "tailor_experience")
     workflow.add_edge("tailor_experience", "tailor_projects")
     workflow.add_edge("tailor_projects", "tailor_education")
-    workflow.add_edge("tailor_education", "tailor_certifications")
-    workflow.add_edge("tailor_certifications", "tailor_extracurricular")
-    workflow.add_edge("tailor_extracurricular", "validate_yaml")
+    workflow.add_edge("tailor_education", "tailor_certifications_and_extracurricular")
+    workflow.add_edge("tailor_certifications_and_extracurricular", "validate_yaml")
     workflow.add_edge("validate_yaml", END)
     
     print("✅ Workflow setup complete")
@@ -249,8 +246,7 @@ def print_summary(state: ResumeState) -> None:
         ('experience_tailored', 'Experience section tailored'),
         ('projects_tailored', 'Projects section tailored'),
         ('education_tailored', 'Education section tailored'),
-        ('certifications_tailored', 'Certifications tailored'),
-        ('extracurricular_tailored', 'Extracurricular activities tailored'),
+        ('certifications_tailored', 'Certifications and extracurricular tailored'),
         ('yaml_validated', 'YAML structure validated')
     ]
     

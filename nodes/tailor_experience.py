@@ -93,7 +93,7 @@ JOB_REQUIREMENTS = {{
 """
         
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-5.2",
             messages=[
                 {"role": "system", "content": "You are an expert resume writer. Optimize the experience section while maintaining factual accuracy and removing obviously irrelevant positions."},
                 {"role": "user", "content": prompt}

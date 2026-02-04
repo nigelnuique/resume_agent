@@ -200,8 +200,7 @@ class ResumeAgentUI:
                     ('tailor_experience', 'Tailoring work experience...', 55),
                     ('tailor_projects', 'Tailoring projects...', 65),
                     ('tailor_education', 'Tailoring education...', 70),
-                    ('tailor_certifications', 'Tailoring certifications...', 75),
-                    ('tailor_extracurricular', 'Tailoring extracurricular activities...', 80),
+                    ('tailor_certifications_and_extracurricular', 'Tailoring certifications and extracurricular...', 78),
                     ('validate_yaml', 'Validating final output...', 85)
                 ]
                 
@@ -393,11 +392,8 @@ UI_HTML = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Resume Agent - AI-Powered Resume Tailoring</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/yaml/yaml.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/darcula.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -946,13 +942,20 @@ UI_HTML = """
 
         .editor-main {
             display: flex;
-            height: 650px;
+            height: 750px;
         }
 
-        .editor-panel {
+        .form-panel {
             width: 50%;
+            overflow-y: auto;
             border-right: 1px solid rgba(255,255,255,0.06);
+            padding: 0;
         }
+
+        .form-panel::-webkit-scrollbar { width: 6px; }
+        .form-panel::-webkit-scrollbar-track { background: transparent; }
+        .form-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        .form-panel::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
         .preview-panel {
             width: 50%;
@@ -962,12 +965,6 @@ UI_HTML = """
             align-items: center;
             justify-content: center;
             position: relative;
-        }
-
-        .CodeMirror {
-            height: 100% !important;
-            font-size: 13px;
-            line-height: 1.6;
         }
 
         .pdf-preview {
@@ -983,14 +980,401 @@ UI_HTML = """
             padding: 20px;
         }
 
-        .editor-footer {
-            padding: 14px 24px;
-            background: rgba(255,255,255,0.02);
-            border-top: 1px solid rgba(255,255,255,0.06);
+        /* ── Accordion Sections ── */
+        .accordion-section {
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .accordion-header {
             display: flex;
-            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s;
+        }
+
+        .accordion-header:hover {
+            background: rgba(255,255,255,0.03);
+        }
+
+        .accordion-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #e4e4e7;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .accordion-chevron {
+            color: #71717a;
+            font-size: 12px;
+            transition: transform 0.25s;
+        }
+
+        .accordion-section.open .accordion-chevron {
+            transform: rotate(180deg);
+        }
+
+        .accordion-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1);
+        }
+
+        .accordion-section.open .accordion-body {
+            max-height: 5000px;
+        }
+
+        .accordion-body-inner {
+            padding: 4px 20px 20px;
+        }
+
+        /* ── Form Inputs ── */
+        .form-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .form-row > .form-field { flex: 1; }
+
+        .form-field {
+            margin-bottom: 12px;
+        }
+
+        .form-field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: #a1a1aa;
+            margin-bottom: 5px;
+        }
+
+        .form-field input[type="text"],
+        .form-field input[type="email"],
+        .form-field input[type="tel"],
+        .form-field input[type="url"],
+        .form-field select,
+        .form-field textarea {
+            width: 100%;
+            padding: 9px 12px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 7px;
+            color: #e4e4e7;
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-field input:focus,
+        .form-field select:focus,
+        .form-field textarea:focus {
+            outline: none;
+            border-color: rgba(96,165,250,0.5);
+            box-shadow: 0 0 0 2px rgba(96,165,250,0.1);
+        }
+
+        .form-field textarea {
+            min-height: 80px;
+            resize: vertical;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .form-field select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2371717a' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 30px;
+        }
+
+        .form-field select option {
+            background: #27272a;
+            color: #e4e4e7;
+        }
+
+        /* ── Repeatable Entries ── */
+        .repeatable-entry {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        .entry-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.02);
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            cursor: pointer;
+        }
+
+        .entry-header-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: #a1a1aa;
+        }
+
+        .entry-controls {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .entry-controls button {
+            background: none;
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #71717a;
+            width: 26px;
+            height: 26px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
             justify-content: center;
-            flex-wrap: wrap;
+            font-size: 12px;
+            transition: all 0.15s;
+        }
+
+        .entry-controls button:hover {
+            background: rgba(255,255,255,0.08);
+            color: #e4e4e7;
+        }
+
+        .entry-controls button.remove-entry-btn:hover {
+            background: rgba(239,68,68,0.15);
+            color: #f87171;
+            border-color: rgba(239,68,68,0.3);
+        }
+
+        .entry-body {
+            padding: 14px;
+        }
+
+        .repeatable-entry.collapsed .entry-body { display: none; }
+
+        /* ── Highlight List ── */
+        .highlight-list { margin-top: 4px; }
+
+        .highlight-item {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 6px;
+            align-items: center;
+        }
+
+        .highlight-item input {
+            flex: 1;
+        }
+
+        .highlight-item button {
+            background: none;
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #71717a;
+            width: 26px;
+            height: 26px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+            transition: all 0.15s;
+        }
+
+        .highlight-item button:hover {
+            background: rgba(239,68,68,0.15);
+            color: #f87171;
+        }
+
+        /* ── Add Buttons ── */
+        .add-entry-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(59,130,246,0.08);
+            border: 1px dashed rgba(59,130,246,0.3);
+            color: #60a5fa;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: 'Inter', sans-serif;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .add-entry-btn:hover {
+            background: rgba(59,130,246,0.15);
+            border-color: rgba(59,130,246,0.5);
+        }
+
+        .add-highlight-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: none;
+            border: none;
+            color: #60a5fa;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 4px 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .add-highlight-btn:hover { color: #93bbfd; }
+
+        /* ── Social Network Row ── */
+        .social-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: flex-end;
+        }
+
+        .social-row .form-field { margin-bottom: 0; }
+        .social-row .form-field:first-child { flex: 0 0 140px; }
+        .social-row .form-field:nth-child(2) { flex: 1; }
+
+        .social-row button {
+            background: none;
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #71717a;
+            width: 34px;
+            height: 34px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+            transition: all 0.15s;
+            margin-bottom: 0;
+        }
+
+        .social-row button:hover {
+            background: rgba(239,68,68,0.15);
+            color: #f87171;
+        }
+
+        /* ── YAML Modal ── */
+        .yaml-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9000;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .yaml-modal.open {
+            display: flex;
+        }
+
+        .yaml-modal-content {
+            background: #18181b;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            width: 700px;
+            max-width: 90vw;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .yaml-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .yaml-modal-header h3 {
+            font-size: 15px;
+            color: #e4e4e7;
+        }
+
+        .yaml-modal-close {
+            background: none;
+            border: none;
+            color: #71717a;
+            font-size: 22px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .yaml-modal-close:hover { color: #e4e4e7; }
+
+        .yaml-modal-body {
+            flex: 1;
+            overflow: auto;
+            padding: 0;
+        }
+
+        .yaml-modal-body textarea {
+            width: 100%;
+            height: 100%;
+            min-height: 400px;
+            background: #0f0f0f;
+            color: #a5d6ff;
+            border: none;
+            padding: 16px;
+            font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+        }
+
+        /* ── Design Theme Select ── */
+        .theme-select-row {
+            padding: 14px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .theme-select-row label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #a1a1aa;
+            white-space: nowrap;
+        }
+
+        .theme-select-row select {
+            padding: 7px 30px 7px 10px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 7px;
+            color: #e4e4e7;
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2371717a' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+        }
+
+        .theme-select-row select option {
+            background: #27272a;
+            color: #e4e4e7;
         }
 
         /* ── Spinner ── */
@@ -1048,22 +1432,19 @@ UI_HTML = """
                 height: auto;
             }
 
-            .editor-panel,
+            .form-panel,
             .preview-panel {
                 width: 100%;
             }
 
-            .editor-panel {
+            .form-panel {
                 border-right: none;
                 border-bottom: 1px solid rgba(255,255,255,0.06);
+                max-height: 500px;
             }
 
             .preview-panel {
                 min-height: 400px;
-            }
-
-            .CodeMirror {
-                min-height: 350px;
             }
 
             .header h1 { font-size: 22px; }
@@ -1071,6 +1452,15 @@ UI_HTML = """
             .editor-header {
                 flex-direction: column;
                 align-items: flex-start;
+            }
+
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+
+            .social-row {
+                flex-wrap: wrap;
             }
         }
     </style>
@@ -1179,8 +1569,7 @@ UI_HTML = """
                     <div class="progress-step-dot" data-step="tailor_experience"></div>
                     <div class="progress-step-dot" data-step="tailor_projects"></div>
                     <div class="progress-step-dot" data-step="tailor_education"></div>
-                    <div class="progress-step-dot" data-step="tailor_certifications"></div>
-                    <div class="progress-step-dot" data-step="tailor_extracurricular"></div>
+                    <div class="progress-step-dot" data-step="tailor_certifications_and_extracurricular"></div>
                     <div class="progress-step-dot" data-step="validate_yaml"></div>
                 </div>
             </div>
@@ -1197,6 +1586,9 @@ UI_HTML = """
                     <div class="editor-status info" id="editor-status">Ready</div>
                 </div>
                 <div class="editor-header-right">
+                    <button class="btn btn-secondary" onclick="openYAMLModal()">
+                        { } Show Raw YAML
+                    </button>
                     <button class="btn btn-download" onclick="downloadYAML()" title="Download YAML">
                         &#11123; Download YAML
                     </button>
@@ -1206,9 +1598,129 @@ UI_HTML = """
                 </div>
             </div>
 
+            <!-- Design theme selector -->
+            <div class="theme-select-row">
+                <label for="design-theme">Design Theme:</label>
+                <select id="design-theme" onchange="onFormInput()">
+                    <option value="sb2nov">sb2nov</option>
+                    <option value="classic">classic</option>
+                    <option value="moderncv">moderncv</option>
+                    <option value="engineeringresumes">engineeringresumes</option>
+                </select>
+            </div>
+
             <div class="editor-main">
-                <div class="editor-panel">
-                    <textarea id="yaml-editor">{{ working_cv_content }}</textarea>
+                <div class="form-panel" id="form-panel">
+
+                    <!-- Personal Info -->
+                    <div class="accordion-section open" data-section="personal">
+                        <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <h3>Personal Info</h3>
+                            <span class="accordion-chevron">&#9660;</span>
+                        </div>
+                        <div class="accordion-body"><div class="accordion-body-inner">
+                            <div class="form-row">
+                                <div class="form-field"><label>Name</label><input type="text" id="cv-name" /></div>
+                                <div class="form-field"><label>Location</label><input type="text" id="cv-location" /></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-field"><label>Email</label><input type="email" id="cv-email" /></div>
+                                <div class="form-field"><label>Phone</label><input type="tel" id="cv-phone" /></div>
+                            </div>
+                            <div class="form-field"><label>Website</label><input type="url" id="cv-website" /></div>
+                            <div class="form-field">
+                                <label>Social Networks</label>
+                                <div id="social-list"></div>
+                                <button class="add-entry-btn" onclick="addSocialRow()">+ Add Social Network</button>
+                            </div>
+                        </div></div>
+                    </div>
+
+                    <!-- Professional Summary -->
+                    <div class="accordion-section open" data-section="summary">
+                        <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <h3>Professional Summary</h3>
+                            <span class="accordion-chevron">&#9660;</span>
+                        </div>
+                        <div class="accordion-body"><div class="accordion-body-inner">
+                            <div class="form-field">
+                                <textarea id="cv-summary" rows="4" placeholder="Write your professional summary..."></textarea>
+                            </div>
+                        </div></div>
+                    </div>
+
+                    <!-- Experience -->
+                    <div class="accordion-section" data-section="experience">
+                        <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <h3>Experience</h3>
+                            <span class="accordion-chevron">&#9660;</span>
+                        </div>
+                        <div class="accordion-body"><div class="accordion-body-inner">
+                            <div id="experience-list"></div>
+                            <button class="add-entry-btn" onclick="addExperienceEntry()">+ Add Experience</button>
+                        </div></div>
+                    </div>
+
+                    <!-- Education -->
+                    <div class="accordion-section" data-section="education">
+                        <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <h3>Education</h3>
+                            <span class="accordion-chevron">&#9660;</span>
+                        </div>
+                        <div class="accordion-body"><div class="accordion-body-inner">
+                            <div id="education-list"></div>
+                            <button class="add-entry-btn" onclick="addEducationEntry()">+ Add Education</button>
+                        </div></div>
+                    </div>
+
+                    <!-- Projects -->
+                    <div class="accordion-section" data-section="projects">
+                        <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <h3>Projects</h3>
+                            <span class="accordion-chevron">&#9660;</span>
+                        </div>
+                        <div class="accordion-body"><div class="accordion-body-inner">
+                            <div id="projects-list"></div>
+                            <button class="add-entry-btn" onclick="addProjectEntry()">+ Add Project</button>
+                        </div></div>
+                    </div>
+
+                    <!-- Skills -->
+                    <div class="accordion-section" data-section="skills">
+                        <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <h3>Skills</h3>
+                            <span class="accordion-chevron">&#9660;</span>
+                        </div>
+                        <div class="accordion-body"><div class="accordion-body-inner">
+                            <div id="skills-list"></div>
+                            <button class="add-entry-btn" onclick="addSkillRow()">+ Add Skill</button>
+                        </div></div>
+                    </div>
+
+                    <!-- Certifications -->
+                    <div class="accordion-section" data-section="certifications">
+                        <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <h3>Certifications</h3>
+                            <span class="accordion-chevron">&#9660;</span>
+                        </div>
+                        <div class="accordion-body"><div class="accordion-body-inner">
+                            <div id="certifications-list"></div>
+                            <button class="add-entry-btn" onclick="addCertificationRow()">+ Add Certification</button>
+                        </div></div>
+                    </div>
+
+                    <!-- Extracurricular -->
+                    <div class="accordion-section" data-section="extracurricular">
+                        <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <h3>Extracurricular</h3>
+                            <span class="accordion-chevron">&#9660;</span>
+                        </div>
+                        <div class="accordion-body"><div class="accordion-body-inner">
+                            <div id="extracurricular-list"></div>
+                            <button class="add-entry-btn" onclick="addExtracurricularRow()">+ Add Activity</button>
+                        </div></div>
+                    </div>
+
                 </div>
 
                 <div class="preview-panel">
@@ -1218,14 +1730,21 @@ UI_HTML = """
                     <iframe class="pdf-preview" id="pdf-preview" style="display: none;"></iframe>
                 </div>
             </div>
+        </div>
 
-            <div class="editor-footer">
-                <button class="btn btn-secondary" onclick="saveAndRender()">
-                    &#8635; Re-render Preview
-                </button>
-                <button class="btn btn-download" onclick="downloadYAML()">
-                    &#11123; Download YAML
-                </button>
+        <!-- Hidden textarea to hold YAML for init -->
+        <textarea id="yaml-editor" style="display:none;">{{ working_cv_content }}</textarea>
+
+        <!-- Raw YAML Modal -->
+        <div class="yaml-modal" id="yaml-modal">
+            <div class="yaml-modal-content">
+                <div class="yaml-modal-header">
+                    <h3>Raw YAML</h3>
+                    <button class="yaml-modal-close" onclick="closeYAMLModal()">&times;</button>
+                </div>
+                <div class="yaml-modal-body">
+                    <textarea id="yaml-modal-text" readonly></textarea>
+                </div>
             </div>
         </div>
     </div>
@@ -1236,25 +1755,24 @@ UI_HTML = """
 
     <script>
         const socket = io();
-        let editor;
         let saveTimeout;
         let isRendering = false;
+        let formReady = false;
         const completedSteps = new Set();
 
         /* ── Toast System ── */
-        function showToast(message, type = 'info', duration = 4000) {
+        function showToast(message, type, duration) {
+            type = type || 'info';
+            duration = duration !== undefined ? duration : 4000;
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             toast.className = 'toast toast-' + type;
-
             const icons = { success: '&#10003;', error: '&#10007;', info: '&#8505;' };
             toast.innerHTML =
                 '<span class="toast-icon">' + (icons[type] || icons.info) + '</span>' +
                 '<span class="toast-text">' + message + '</span>' +
                 '<button class="toast-close" onclick="dismissToast(this)">&times;</button>';
-
             container.appendChild(toast);
-
             if (duration > 0) {
                 setTimeout(function() { dismissToast(toast.querySelector('.toast-close')); }, duration);
             }
@@ -1275,26 +1793,9 @@ UI_HTML = """
             chevron.classList.toggle('open');
         }
 
-        /* ── Initialize CodeMirror ── */
-        function initializeEditor() {
-            if (!editor) {
-                editor = CodeMirror.fromTextArea(document.getElementById('yaml-editor'), {
-                    mode: 'yaml',
-                    theme: 'darcula',
-                    lineNumbers: true,
-                    lineWrapping: true,
-                    indentUnit: 2,
-                    tabSize: 2,
-                    autoCloseBrackets: true,
-                    matchBrackets: true
-                });
-
-                editor.on('change', function() {
-                    setEditorStatus('Editing...', 'info');
-                    clearTimeout(saveTimeout);
-                    saveTimeout = setTimeout(function() { saveAndRender(); }, 1500);
-                });
-            }
+        /* ── Accordion ── */
+        function toggleAccordion(header) {
+            header.parentElement.classList.toggle('open');
         }
 
         /* ── Drag & Drop File Upload ── */
@@ -1302,39 +1803,25 @@ UI_HTML = """
             const dropZone = document.getElementById('cv-drop-zone');
             const fileInput = document.getElementById('cv-file');
             const nameDisplay = document.getElementById('file-name-display');
-
             ['dragenter','dragover'].forEach(function(evt) {
-                dropZone.addEventListener(evt, function(e) {
-                    e.preventDefault();
-                    dropZone.classList.add('drag-over');
-                });
+                dropZone.addEventListener(evt, function(e) { e.preventDefault(); dropZone.classList.add('drag-over'); });
             });
-
             ['dragleave','drop'].forEach(function(evt) {
-                dropZone.addEventListener(evt, function(e) {
-                    e.preventDefault();
-                    dropZone.classList.remove('drag-over');
-                });
+                dropZone.addEventListener(evt, function(e) { e.preventDefault(); dropZone.classList.remove('drag-over'); });
             });
-
             dropZone.addEventListener('drop', function(e) {
-                const files = e.dataTransfer.files;
+                var files = e.dataTransfer.files;
                 if (files.length) handleFile(files[0]);
             });
-
             fileInput.addEventListener('change', function(e) {
                 if (e.target.files.length) handleFile(e.target.files[0]);
             });
-
             function handleFile(file) {
-                if (!file.name.match(/\\.ya?ml$/i)) {
-                    showToast('Please upload a .yaml or .yml file', 'error');
-                    return;
-                }
-                const reader = new FileReader();
+                if (!file.name.match(/\\.ya?ml$/i)) { showToast('Please upload a .yaml or .yml file', 'error'); return; }
+                var reader = new FileReader();
                 reader.onload = function(e) {
                     document.getElementById('master-cv').value = e.target.result;
-                    nameDisplay.textContent = '&#10003; ' + file.name;
+                    nameDisplay.textContent = '\\u2713 ' + file.name;
                     nameDisplay.style.display = 'block';
                     showToast('File loaded: ' + file.name, 'success');
                 };
@@ -1344,116 +1831,71 @@ UI_HTML = """
 
         /* ── AI Processing ── */
         function startAIProcessing() {
-            const masterCV = document.getElementById('master-cv').value.trim();
-            const jobAd = document.getElementById('job-ad').value.trim();
-
-            if (!masterCV) {
-                showToast('Please provide your master CV in YAML format', 'error');
-                return;
-            }
-            if (!jobAd) {
-                showToast('Please provide the job advertisement text', 'error');
-                return;
-            }
-
-            const btn = document.getElementById('process-btn');
+            var masterCV = document.getElementById('master-cv').value.trim();
+            var jobAd = document.getElementById('job-ad').value.trim();
+            if (!masterCV) { showToast('Please provide your master CV in YAML format', 'error'); return; }
+            if (!jobAd) { showToast('Please provide the job advertisement text', 'error'); return; }
+            var btn = document.getElementById('process-btn');
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner">Processing</span>';
             completedSteps.clear();
-            document.querySelectorAll('.progress-step-dot').forEach(function(d) {
-                d.className = 'progress-step-dot';
-            });
-
-            fetch('/api/save-master-cv', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ yaml: masterCV })
+            document.querySelectorAll('.progress-step-dot').forEach(function(d) { d.className = 'progress-step-dot'; });
+            fetch('/api/save-master-cv', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({yaml:masterCV}) })
+            .then(function(r){return r.json();})
+            .then(function(data){ if(data.error) throw new Error(data.error); return fetch('/api/save-job-ad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({job_ad:jobAd})}); })
+            .then(function(r){return r.json();})
+            .then(function(data){ if(data.error) throw new Error(data.error); return fetch('/api/start-workflow',{method:'POST',headers:{'Content-Type':'application/json'}}); })
+            .then(function(r){return r.json();})
+            .then(function(data){
+                if(data.error) throw new Error(data.error);
+                document.getElementById('progress-section').style.display='block';
+                document.getElementById('progress-section').scrollIntoView({behavior:'smooth',block:'center'});
+                showToast('AI processing started','info');
             })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                if (data.error) { throw new Error(data.error); }
-                return fetch('/api/save-job-ad', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ job_ad: jobAd })
-                });
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                if (data.error) { throw new Error(data.error); }
-                return fetch('/api/start-workflow', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                if (data.error) { throw new Error(data.error); }
-                document.getElementById('progress-section').style.display = 'block';
-                document.getElementById('progress-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
-                showToast('AI processing started', 'info');
-            })
-            .catch(function(error) {
-                showToast(error.message, 'error', 6000);
-                resetProcessBtn();
-            });
+            .catch(function(error){ showToast(error.message,'error',6000); resetProcessBtn(); });
         }
 
         function resetProcessBtn() {
-            const btn = document.getElementById('process-btn');
+            var btn = document.getElementById('process-btn');
             btn.disabled = false;
             btn.innerHTML = 'Process with AI';
         }
 
         /* ── Socket.IO handlers ── */
         socket.on('workflow_progress', function(data) {
-            document.getElementById('progress-fill').style.width = (data.progress || 0) + '%';
+            document.getElementById('progress-fill').style.width = (data.progress||0)+'%';
             document.getElementById('progress-message').textContent = data.message;
-
             if (data.step) {
                 completedSteps.add(data.step);
                 document.querySelectorAll('.progress-step-dot').forEach(function(dot) {
-                    if (completedSteps.has(dot.dataset.step)) {
-                        dot.className = 'progress-step-dot completed';
-                    } else if (dot.dataset.step === data.step) {
-                        dot.className = 'progress-step-dot active';
-                    }
+                    if (completedSteps.has(dot.dataset.step)) dot.className='progress-step-dot completed';
+                    else if (dot.dataset.step===data.step) dot.className='progress-step-dot active';
                 });
             }
         });
 
         socket.on('workflow_complete', function(data) {
-            document.getElementById('progress-fill').style.width = '100%';
-            document.getElementById('progress-message').textContent = 'Complete! Loading editor...';
-            document.querySelectorAll('.progress-step-dot').forEach(function(d) {
-                d.className = 'progress-step-dot completed';
-            });
-
+            document.getElementById('progress-fill').style.width='100%';
+            document.getElementById('progress-message').textContent='Complete! Loading editor...';
+            document.querySelectorAll('.progress-step-dot').forEach(function(d){d.className='progress-step-dot completed';});
             fetch('/api/load-working-cv')
-                .then(function(r) { return r.text(); })
+                .then(function(r){return r.text();})
                 .then(function(workingCV) {
-                    document.getElementById('yaml-editor').value = workingCV;
-                    document.getElementById('editor-section').style.display = 'block';
-                    initializeEditor();
-                    editor.setValue(workingCV);
-
-                    setTimeout(function() {
-                        document.getElementById('progress-section').style.display = 'none';
-                        document.getElementById('editor-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }, 1500);
-
+                    document.getElementById('editor-section').style.display='block';
+                    populateFormFromYAML(workingCV);
+                    setTimeout(function(){
+                        document.getElementById('progress-section').style.display='none';
+                        document.getElementById('editor-section').scrollIntoView({behavior:'smooth',block:'start'});
+                    },1500);
                     resetProcessBtn();
-                    showToast('Resume tailored successfully!', 'success', 5000);
-
-                    setTimeout(function() {
-                        if (editor) { saveAndRender(); }
-                    }, 500);
+                    showToast('Resume tailored successfully!','success',5000);
+                    setTimeout(function(){ saveAndRender(); },500);
                 });
         });
 
         socket.on('workflow_error', function(data) {
-            showToast('Workflow error: ' + data.error, 'error', 8000);
-            document.getElementById('progress-section').style.display = 'none';
+            showToast('Workflow error: '+data.error,'error',8000);
+            document.getElementById('progress-section').style.display='none';
             resetProcessBtn();
         });
 
@@ -1461,7 +1903,7 @@ UI_HTML = """
         function setEditorStatus(message, type) {
             var el = document.getElementById('editor-status');
             el.textContent = message;
-            el.className = 'editor-status ' + (type || 'info');
+            el.className = 'editor-status ' + (type||'info');
         }
 
         function showPreviewMessage(msg) {
@@ -1476,17 +1918,412 @@ UI_HTML = """
             document.getElementById('preview-message').style.display = 'none';
         }
 
+        /* ── Form input handler (debounced) ── */
+        function onFormInput() {
+            if (!formReady) return;
+            setEditorStatus('Editing...', 'info');
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(function() { saveAndRender(); }, 1500);
+        }
+
+        /* Attach input listeners to the form panel */
+        document.getElementById('form-panel').addEventListener('input', onFormInput);
+
+        /* ── buildYAMLFromForm ── */
+        function buildYAMLFromForm() {
+            var obj = { cv: {}, design: {} };
+            var cv = obj.cv;
+
+            /* Personal info */
+            cv.name = document.getElementById('cv-name').value || '';
+            cv.location = document.getElementById('cv-location').value || '';
+            cv.email = document.getElementById('cv-email').value || '';
+            cv.phone = document.getElementById('cv-phone').value || '';
+            cv.website = document.getElementById('cv-website').value || '';
+
+            /* Social networks */
+            var socials = [];
+            document.querySelectorAll('#social-list .social-row').forEach(function(row) {
+                var net = row.querySelector('select').value;
+                var user = row.querySelector('input[type=text]').value;
+                if (net && user) socials.push({ network: net, username: user });
+            });
+            if (socials.length) cv.social_networks = socials;
+
+            /* Sections */
+            cv.sections = {};
+
+            /* Professional summary */
+            var summary = document.getElementById('cv-summary').value.trim();
+            if (summary) cv.sections.professional_summary = [summary];
+
+            /* Experience */
+            var experiences = [];
+            document.querySelectorAll('#experience-list .repeatable-entry').forEach(function(entry) {
+                var e = {};
+                e.company = entry.querySelector('[data-field=company]').value || '';
+                e.position = entry.querySelector('[data-field=position]').value || '';
+                e.start_date = entry.querySelector('[data-field=start_date]').value || '';
+                e.end_date = entry.querySelector('[data-field=end_date]').value || '';
+                e.location = entry.querySelector('[data-field=location]').value || '';
+                var hl = [];
+                entry.querySelectorAll('.highlight-item input').forEach(function(inp) {
+                    if (inp.value.trim()) hl.push(inp.value.trim());
+                });
+                if (hl.length) e.highlights = hl;
+                experiences.push(e);
+            });
+            if (experiences.length) cv.sections.experience = experiences;
+
+            /* Education */
+            var educations = [];
+            document.querySelectorAll('#education-list .repeatable-entry').forEach(function(entry) {
+                var e = {};
+                e.institution = entry.querySelector('[data-field=institution]').value || '';
+                e.area = entry.querySelector('[data-field=area]').value || '';
+                e.degree = entry.querySelector('[data-field=degree]').value || '';
+                e.start_date = entry.querySelector('[data-field=start_date]').value || '';
+                e.end_date = entry.querySelector('[data-field=end_date]').value || '';
+                e.location = entry.querySelector('[data-field=location]').value || '';
+                var hl = [];
+                entry.querySelectorAll('.highlight-item input').forEach(function(inp) {
+                    if (inp.value.trim()) hl.push(inp.value.trim());
+                });
+                if (hl.length) e.highlights = hl;
+                educations.push(e);
+            });
+            if (educations.length) cv.sections.education = educations;
+
+            /* Projects */
+            var projects = [];
+            document.querySelectorAll('#projects-list .repeatable-entry').forEach(function(entry) {
+                var p = {};
+                p.name = entry.querySelector('[data-field=name]').value || '';
+                p.end_date = entry.querySelector('[data-field=end_date]').value || '';
+                p.summary = entry.querySelector('[data-field=summary]').value || '';
+                var hl = [];
+                entry.querySelectorAll('.highlight-item input').forEach(function(inp) {
+                    if (inp.value.trim()) hl.push(inp.value.trim());
+                });
+                if (hl.length) p.highlights = hl;
+                projects.push(p);
+            });
+            if (projects.length) cv.sections.projects = projects;
+
+            /* Skills */
+            var skills = [];
+            document.querySelectorAll('#skills-list .social-row').forEach(function(row) {
+                var label = row.querySelector('[data-field=label]').value || '';
+                var details = row.querySelector('[data-field=details]').value || '';
+                if (label) skills.push({ label: label, details: details });
+            });
+            if (skills.length) cv.sections.skills = skills;
+
+            /* Certifications */
+            var certs = [];
+            document.querySelectorAll('#certifications-list .highlight-item input').forEach(function(inp) {
+                if (inp.value.trim()) certs.push(inp.value.trim());
+            });
+            if (certs.length) cv.sections.certifications = certs;
+
+            /* Extracurricular */
+            var extras = [];
+            document.querySelectorAll('#extracurricular-list .social-row').forEach(function(row) {
+                var label = row.querySelector('[data-field=label]').value || '';
+                var details = row.querySelector('[data-field=details]').value || '';
+                if (label) extras.push({ label: label, details: details });
+            });
+            if (extras.length) cv.sections.extracurricular = extras;
+
+            /* Design */
+            obj.design = { theme: document.getElementById('design-theme').value };
+
+            /* Remove empty string values to keep YAML clean */
+            function cleanObj(o) {
+                if (Array.isArray(o)) return o.map(cleanObj);
+                if (o && typeof o === 'object') {
+                    var c = {};
+                    Object.keys(o).forEach(function(k) {
+                        var v = cleanObj(o[k]);
+                        if (v !== '' && v !== null && v !== undefined &&
+                            !(Array.isArray(v) && v.length === 0) &&
+                            !(typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0))
+                            c[k] = v;
+                    });
+                    return c;
+                }
+                return o;
+            }
+
+            return jsyaml.dump(cleanObj(obj), { lineWidth: -1, quotingType: '"', forceQuotes: false });
+        }
+
+        /* ── populateFormFromYAML ── */
+        function populateFormFromYAML(yamlString) {
+            formReady = false;
+            try {
+                var data = jsyaml.load(yamlString);
+                if (!data) { formReady = true; return; }
+                var cv = data.cv || {};
+                var sections = cv.sections || {};
+
+                /* Personal info */
+                document.getElementById('cv-name').value = cv.name || '';
+                document.getElementById('cv-location').value = cv.location || '';
+                document.getElementById('cv-email').value = cv.email || '';
+                document.getElementById('cv-phone').value = cv.phone || '';
+                document.getElementById('cv-website').value = cv.website || '';
+
+                /* Social networks */
+                document.getElementById('social-list').innerHTML = '';
+                (cv.social_networks || []).forEach(function(s) { addSocialRow(s.network, s.username); });
+
+                /* Summary */
+                var summaryArr = sections.professional_summary || [];
+                document.getElementById('cv-summary').value = summaryArr.join('\\n');
+
+                /* Experience */
+                document.getElementById('experience-list').innerHTML = '';
+                (sections.experience || []).forEach(function(e) { addExperienceEntry(e); });
+
+                /* Education */
+                document.getElementById('education-list').innerHTML = '';
+                (sections.education || []).forEach(function(e) { addEducationEntry(e); });
+
+                /* Projects */
+                document.getElementById('projects-list').innerHTML = '';
+                (sections.projects || []).forEach(function(p) { addProjectEntry(p); });
+
+                /* Skills */
+                document.getElementById('skills-list').innerHTML = '';
+                (sections.skills || []).forEach(function(s) { addSkillRow(s.label, s.details); });
+
+                /* Certifications */
+                document.getElementById('certifications-list').innerHTML = '';
+                (sections.certifications || []).forEach(function(c) { addCertificationRow(c); });
+
+                /* Extracurricular */
+                document.getElementById('extracurricular-list').innerHTML = '';
+                (sections.extracurricular || []).forEach(function(e) { addExtracurricularRow(e.label, e.details); });
+
+                /* Design theme */
+                if (data.design && data.design.theme) {
+                    document.getElementById('design-theme').value = data.design.theme;
+                }
+
+            } catch(e) {
+                console.error('Error parsing YAML:', e);
+                showToast('Could not parse YAML: ' + e.message, 'error');
+            }
+            formReady = true;
+        }
+
+        /* ── Add / Remove helpers ── */
+
+        /* Social network row */
+        function addSocialRow(network, username) {
+            var list = document.getElementById('social-list');
+            var row = document.createElement('div');
+            row.className = 'social-row';
+            row.innerHTML =
+                '<div class="form-field"><select>' +
+                '<option value="LinkedIn">LinkedIn</option>' +
+                '<option value="GitHub">GitHub</option>' +
+                '<option value="Twitter">Twitter</option>' +
+                '<option value="Instagram">Instagram</option>' +
+                '<option value="Orcid">Orcid</option>' +
+                '<option value="Mastodon">Mastodon</option>' +
+                '<option value="StackOverflow">StackOverflow</option>' +
+                '<option value="GitLab">GitLab</option>' +
+                '<option value="ResearchGate">ResearchGate</option>' +
+                '<option value="YouTube">YouTube</option>' +
+                '</select></div>' +
+                '<div class="form-field"><input type="text" placeholder="Username" value="' + escAttr(username||'') + '" /></div>' +
+                '<button onclick="this.parentElement.remove();onFormInput();" title="Remove">&times;</button>';
+            if (network) row.querySelector('select').value = network;
+            list.appendChild(row);
+        }
+
+        /* Highlight list builder */
+        function buildHighlightHTML(highlights) {
+            var html = '<div class="form-field"><label>Highlights</label><div class="highlight-list">';
+            (highlights || []).forEach(function(h) {
+                html += '<div class="highlight-item"><input type="text" value="' + escAttr(h) + '" /><button onclick="this.parentElement.remove();onFormInput();" title="Remove">&times;</button></div>';
+            });
+            html += '</div><button class="add-highlight-btn" onclick="addHighlight(this)">+ Add highlight</button></div>';
+            return html;
+        }
+
+        function addHighlight(btn) {
+            var list = btn.previousElementSibling;
+            var item = document.createElement('div');
+            item.className = 'highlight-item';
+            item.innerHTML = '<input type="text" /><button onclick="this.parentElement.remove();onFormInput();" title="Remove">&times;</button>';
+            list.appendChild(item);
+            item.querySelector('input').focus();
+        }
+
+        /* Reorder helpers */
+        function moveEntry(btn, dir) {
+            var entry = btn.closest('.repeatable-entry');
+            var parent = entry.parentElement;
+            if (dir === -1 && entry.previousElementSibling) {
+                parent.insertBefore(entry, entry.previousElementSibling);
+            } else if (dir === 1 && entry.nextElementSibling) {
+                parent.insertBefore(entry.nextElementSibling, entry);
+            }
+            onFormInput();
+        }
+
+        function toggleEntryCollapse(el) {
+            var entry = el.closest('.repeatable-entry');
+            if (entry) entry.classList.toggle('collapsed');
+        }
+
+        function removeEntry(btn) {
+            btn.closest('.repeatable-entry').remove();
+            onFormInput();
+        }
+
+        function entryControls() {
+            return '<div class="entry-controls">' +
+                '<button onclick="moveEntry(this,-1)" title="Move up">&#9650;</button>' +
+                '<button onclick="moveEntry(this,1)" title="Move down">&#9660;</button>' +
+                '<button onclick="toggleEntryCollapse(this)" title="Collapse">&#8722;</button>' +
+                '<button class="remove-entry-btn" onclick="removeEntry(this)" title="Remove">&times;</button>' +
+                '</div>';
+        }
+
+        /* Experience */
+        function addExperienceEntry(data) {
+            data = data || {};
+            var list = document.getElementById('experience-list');
+            var entry = document.createElement('div');
+            entry.className = 'repeatable-entry';
+            var title = data.company || data.position || 'New Experience';
+            entry.innerHTML =
+                '<div class="entry-header" onclick="toggleEntryCollapse(this)">' +
+                '<span class="entry-header-title">' + escHTML(title) + '</span>' +
+                entryControls() +
+                '</div>' +
+                '<div class="entry-body">' +
+                '<div class="form-row"><div class="form-field"><label>Company</label><input type="text" data-field="company" value="' + escAttr(data.company||'') + '" oninput="updateEntryTitle(this)" /></div>' +
+                '<div class="form-field"><label>Position</label><input type="text" data-field="position" value="' + escAttr(data.position||'') + '" /></div></div>' +
+                '<div class="form-row"><div class="form-field"><label>Start Date</label><input type="text" data-field="start_date" value="' + escAttr(data.start_date||'') + '" placeholder="YYYY-MM" /></div>' +
+                '<div class="form-field"><label>End Date</label><input type="text" data-field="end_date" value="' + escAttr(data.end_date||'') + '" placeholder="YYYY-MM or present" /></div>' +
+                '<div class="form-field"><label>Location</label><input type="text" data-field="location" value="' + escAttr(data.location||'') + '" /></div></div>' +
+                buildHighlightHTML(data.highlights) +
+                '</div>';
+            list.appendChild(entry);
+        }
+
+        /* Education */
+        function addEducationEntry(data) {
+            data = data || {};
+            var list = document.getElementById('education-list');
+            var entry = document.createElement('div');
+            entry.className = 'repeatable-entry';
+            var title = data.institution || data.degree || 'New Education';
+            entry.innerHTML =
+                '<div class="entry-header" onclick="toggleEntryCollapse(this)">' +
+                '<span class="entry-header-title">' + escHTML(title) + '</span>' +
+                entryControls() +
+                '</div>' +
+                '<div class="entry-body">' +
+                '<div class="form-row"><div class="form-field"><label>Institution</label><input type="text" data-field="institution" value="' + escAttr(data.institution||'') + '" oninput="updateEntryTitle(this)" /></div>' +
+                '<div class="form-field"><label>Degree</label><input type="text" data-field="degree" value="' + escAttr(data.degree||'') + '" /></div></div>' +
+                '<div class="form-row"><div class="form-field"><label>Area</label><input type="text" data-field="area" value="' + escAttr(data.area||'') + '" /></div>' +
+                '<div class="form-field"><label>Location</label><input type="text" data-field="location" value="' + escAttr(data.location||'') + '" /></div></div>' +
+                '<div class="form-row"><div class="form-field"><label>Start Date</label><input type="text" data-field="start_date" value="' + escAttr(data.start_date||'') + '" placeholder="YYYY-MM" /></div>' +
+                '<div class="form-field"><label>End Date</label><input type="text" data-field="end_date" value="' + escAttr(data.end_date||'') + '" placeholder="YYYY-MM" /></div></div>' +
+                buildHighlightHTML(data.highlights) +
+                '</div>';
+            list.appendChild(entry);
+        }
+
+        /* Projects */
+        function addProjectEntry(data) {
+            data = data || {};
+            var list = document.getElementById('projects-list');
+            var entry = document.createElement('div');
+            entry.className = 'repeatable-entry';
+            var title = data.name || 'New Project';
+            entry.innerHTML =
+                '<div class="entry-header" onclick="toggleEntryCollapse(this)">' +
+                '<span class="entry-header-title">' + escHTML(title) + '</span>' +
+                entryControls() +
+                '</div>' +
+                '<div class="entry-body">' +
+                '<div class="form-row"><div class="form-field"><label>Name</label><input type="text" data-field="name" value="' + escAttr(data.name||'') + '" oninput="updateEntryTitle(this)" /></div>' +
+                '<div class="form-field"><label>End Date</label><input type="text" data-field="end_date" value="' + escAttr(data.end_date||'') + '" placeholder="YYYY-MM" /></div></div>' +
+                '<div class="form-field"><label>Summary</label><input type="text" data-field="summary" value="' + escAttr(data.summary||'') + '" /></div>' +
+                buildHighlightHTML(data.highlights) +
+                '</div>';
+            list.appendChild(entry);
+        }
+
+        /* Skills row */
+        function addSkillRow(label, details) {
+            var list = document.getElementById('skills-list');
+            var row = document.createElement('div');
+            row.className = 'social-row';
+            row.innerHTML =
+                '<div class="form-field"><label>Label</label><input type="text" data-field="label" value="' + escAttr(label||'') + '" /></div>' +
+                '<div class="form-field"><label>Details</label><input type="text" data-field="details" value="' + escAttr(details||'') + '" placeholder="Comma-separated" /></div>' +
+                '<button onclick="this.parentElement.remove();onFormInput();" title="Remove">&times;</button>';
+            list.appendChild(row);
+        }
+
+        /* Certification row */
+        function addCertificationRow(value) {
+            var list = document.getElementById('certifications-list');
+            var item = document.createElement('div');
+            item.className = 'highlight-item';
+            item.innerHTML = '<input type="text" value="' + escAttr(value||'') + '" /><button onclick="this.parentElement.remove();onFormInput();" title="Remove">&times;</button>';
+            list.appendChild(item);
+        }
+
+        /* Extracurricular row */
+        function addExtracurricularRow(label, details) {
+            var list = document.getElementById('extracurricular-list');
+            var row = document.createElement('div');
+            row.className = 'social-row';
+            row.innerHTML =
+                '<div class="form-field"><label>Label</label><input type="text" data-field="label" value="' + escAttr(label||'') + '" /></div>' +
+                '<div class="form-field"><label>Details</label><input type="text" data-field="details" value="' + escAttr(details||'') + '" /></div>' +
+                '<button onclick="this.parentElement.remove();onFormInput();" title="Remove">&times;</button>';
+            list.appendChild(row);
+        }
+
+        /* Update entry header title on input */
+        function updateEntryTitle(input) {
+            var entry = input.closest('.repeatable-entry');
+            if (entry) {
+                var titleEl = entry.querySelector('.entry-header-title');
+                if (titleEl) titleEl.textContent = input.value || 'Untitled';
+            }
+        }
+
+        /* ── HTML/attr escaping ── */
+        function escAttr(s) {
+            return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+        function escHTML(s) {
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+
+        /* ── Save & Render ── */
         function saveAndRender() {
-            if (isRendering || !editor) return;
+            if (isRendering) return;
             isRendering = true;
             setEditorStatus('Rendering...', 'info');
-
+            var yamlContent = buildYAMLFromForm();
             fetch('/api/save-working-cv', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ yaml: editor.getValue() })
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ yaml: yamlContent })
             })
-            .then(function(r) { return r.json(); })
+            .then(function(r){return r.json();})
             .then(function(data) {
                 isRendering = false;
                 if (data.success) {
@@ -1497,7 +2334,7 @@ UI_HTML = """
                         if (data.render.error.includes('in progress')) {
                             setEditorStatus('Rendering...', 'info');
                             showPreviewMessage('Rendering changes...');
-                            setTimeout(function() { if (!isRendering) saveAndRender(); }, 1500);
+                            setTimeout(function(){ if(!isRendering) saveAndRender(); }, 1500);
                         } else {
                             setEditorStatus('Render error', 'error');
                             showPreviewMessage(data.render.error);
@@ -1517,8 +2354,7 @@ UI_HTML = """
 
         /* ── Download Functions ── */
         function downloadYAML() {
-            if (!editor) return;
-            var content = editor.getValue();
+            var content = buildYAMLFromForm();
             var blob = new Blob([content], { type: 'text/yaml' });
             var url = URL.createObjectURL(blob);
             var a = document.createElement('a');
@@ -1533,16 +2369,30 @@ UI_HTML = """
             window.location.href = '/api/download-yaml';
         }
 
+        /* ── Raw YAML Modal ── */
+        function openYAMLModal() {
+            var yaml = buildYAMLFromForm();
+            document.getElementById('yaml-modal-text').value = yaml;
+            document.getElementById('yaml-modal').classList.add('open');
+        }
+
+        function closeYAMLModal() {
+            document.getElementById('yaml-modal').classList.remove('open');
+        }
+
+        /* Close modal on backdrop click */
+        document.getElementById('yaml-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeYAMLModal();
+        });
+
         /* ── Init on load ── */
         var yamlEl = document.getElementById('yaml-editor');
         if (yamlEl.value.trim() && yamlEl.value.indexOf('No working CV available') === -1) {
             document.getElementById('editor-section').style.display = 'block';
-            initializeEditor();
+            populateFormFromYAML(yamlEl.value);
             setTimeout(function() {
-                if (editor) {
-                    setEditorStatus('Rendering...', 'info');
-                    saveAndRender();
-                }
+                setEditorStatus('Rendering...', 'info');
+                saveAndRender();
             }, 500);
         }
     </script>

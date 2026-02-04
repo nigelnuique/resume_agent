@@ -30,9 +30,10 @@ The resume editing experience is now **fully automatic** with real-time change d
 
 ## 🚀 How It Works
 
-1. **Edit your resume** in the YAML editor
-2. **Stop typing** for 1.5 seconds
+1. **Edit your resume** using the form-based editor (or any field in an accordion section)
+2. **Stop editing** for 1.5 seconds
 3. **System automatically**:
+   - Builds YAML from form fields
    - Detects if content actually changed
    - Uses cached result if no changes
    - Renders new PDF if changes detected

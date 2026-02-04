@@ -76,7 +76,7 @@ JOB_REQUIREMENTS = {{
 """
         
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-5-nano",
             messages=[
                 {"role": "system", "content": "You are an expert resume writer. Keep coursework as highlight bullet points, NOT separate fields. NEVER truncate existing descriptions - preserve full text of capstone projects and thesis descriptions exactly as they are. Only include relevant coursework if there are actually relevant courses (0-5 max). If no courses are relevant, omit the coursework highlight entirely."},
                 {"role": "user", "content": prompt}
