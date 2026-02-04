@@ -1166,6 +1166,31 @@ UI_HTML = """
             border-color: rgba(59,130,246,0.4);
         }
 
+        .add-custom-section {
+            padding: 12px 20px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .add-custom-form {
+            display: none;
+            margin-top: 10px;
+            gap: 8px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .add-custom-form.visible {
+            display: flex;
+        }
+
+        .add-custom-form .form-field {
+            margin-bottom: 0;
+        }
+
+        .add-custom-form .form-field label {
+            font-size: 11px;
+        }
+
         .accordion-header h3 {
             font-size: 14px;
             font-weight: 600;
@@ -1866,6 +1891,25 @@ UI_HTML = """
                         <div class="add-section-chips" id="add-section-chips"></div>
                     </div>
 
+                    <!-- Add custom section -->
+                    <div class="add-custom-section" id="add-custom-section">
+                        <button class="add-entry-btn" onclick="toggleCustomSectionForm()">+ Add Custom Section</button>
+                        <div class="add-custom-form" id="add-custom-form">
+                            <div class="form-field" style="flex:1;min-width:150px;">
+                                <label>Section Name</label>
+                                <input type="text" id="custom-section-name" placeholder="e.g. Awards, Volunteer Work" />
+                            </div>
+                            <div class="form-field" style="flex:0 0 130px;">
+                                <label>Type</label>
+                                <select id="custom-section-type">
+                                    <option value="text-list">Text List</option>
+                                    <option value="key-value">Key-Value</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary" style="padding:7px 16px;font-size:13px;" onclick="addCustomSectionFromForm()">Add</button>
+                        </div>
+                    </div>
+
                 </div>
 
                 <div class="yaml-edit-panel" id="yaml-edit-panel">
@@ -2212,7 +2256,29 @@ UI_HTML = """
             document.querySelectorAll('#form-panel .accordion-section').forEach(function(sec) {
                 var key = sec.dataset.section;
                 if (key === 'personal') return;
-                if (sectionBuilders[key]) sectionBuilders[key](cv.sections);
+                if (sectionBuilders[key]) {
+                    sectionBuilders[key](cv.sections);
+                } else if (sec.dataset.customType) {
+                    var yamlKey = sec.dataset.customKey || key;
+                    var type = sec.dataset.customType;
+                    var listEl = sec.querySelector('.accordion-body-inner > div');
+                    if (!listEl) return;
+                    if (type === 'text-list') {
+                        var items = [];
+                        listEl.querySelectorAll('.highlight-item input').forEach(function(inp) {
+                            if (inp.value.trim()) items.push(inp.value.trim());
+                        });
+                        if (items.length) cv.sections[yamlKey] = items;
+                    } else if (type === 'key-value') {
+                        var kvItems = [];
+                        listEl.querySelectorAll('.social-row').forEach(function(row) {
+                            var lbl = row.querySelector('[data-field=label]').value || '';
+                            var det = row.querySelector('[data-field=details]').value || '';
+                            if (lbl) kvItems.push({ label: lbl, details: det });
+                        });
+                        if (kvItems.length) cv.sections[yamlKey] = kvItems;
+                    }
+                }
             });
 
             /* Design */
@@ -2286,10 +2352,31 @@ UI_HTML = """
                 document.getElementById('extracurricular-list').innerHTML = '';
                 (sections.extracurricular || []).forEach(function(e) { addExtracurricularRow(e.label, e.details); });
 
+                /* Remove existing custom sections before rebuilding */
+                document.querySelectorAll('.accordion-section[data-custom-type]').forEach(function(el) {
+                    el.remove();
+                });
+
+                /* Create custom sections for unknown YAML keys */
+                var knownKeys = ['professional_summary', 'experience', 'education', 'projects', 'skills', 'certifications', 'extracurricular'];
+                Object.keys(sections).forEach(function(yamlKey) {
+                    if (knownKeys.indexOf(yamlKey) !== -1) return;
+                    var items = sections[yamlKey];
+                    if (!Array.isArray(items) || items.length === 0) return;
+                    var slug = yamlKey.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+                    var type = 'text-list';
+                    if (typeof items[0] === 'object' && items[0] !== null) type = 'key-value';
+                    createCustomSection(slug, yamlKey, type, items);
+                });
+
                 /* Restore any previously removed sections that are in the YAML */
                 var sectionMap = { professional_summary: 'summary' };
                 var yamlSectionKeys = Object.keys(sections);
-                var yamlDomKeys = yamlSectionKeys.map(function(k) { return sectionMap[k] || k; });
+                var yamlDomKeys = yamlSectionKeys.map(function(k) {
+                    if (sectionMap[k]) return sectionMap[k];
+                    if (knownKeys.indexOf(k) !== -1) return k;
+                    return k.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+                });
                 Object.keys(removedSections).forEach(function(key) {
                     if (yamlDomKeys.indexOf(key) !== -1) {
                         restoreSection(key);
@@ -2350,6 +2437,101 @@ UI_HTML = """
                 '<div class="form-field"><input type="text" placeholder="Username" value="' + escAttr(username||'') + '" /></div>' +
                 '<button onclick="this.parentElement.remove();onFormInput();" title="Remove">&times;</button>';
             if (network) row.querySelector('select').value = network;
+            list.appendChild(row);
+        }
+
+        /* ── Custom Sections ── */
+        function toggleCustomSectionForm() {
+            var form = document.getElementById('add-custom-form');
+            form.classList.toggle('visible');
+            if (form.classList.contains('visible')) {
+                document.getElementById('custom-section-name').focus();
+            }
+        }
+
+        function addCustomSectionFromForm() {
+            var nameInput = document.getElementById('custom-section-name');
+            var typeSelect = document.getElementById('custom-section-type');
+            var name = nameInput.value.trim();
+            if (!name) { showToast('Please enter a section name', 'error'); return; }
+            var type = typeSelect.value;
+            var key = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+            if (document.querySelector('.accordion-section[data-section="' + key + '"]')) {
+                showToast('A section with this name already exists', 'error');
+                return;
+            }
+            createCustomSection(key, name, type, []);
+            nameInput.value = '';
+            document.getElementById('add-custom-form').classList.remove('visible');
+            onFormInput();
+        }
+
+        function createCustomSection(key, label, type, items) {
+            var formPanel = document.getElementById('form-panel');
+            var addBar = document.getElementById('add-section-bar');
+            var section = document.createElement('div');
+            section.className = 'accordion-section open';
+            section.dataset.section = key;
+            section.dataset.label = label;
+            section.dataset.customType = type;
+            section.dataset.customKey = label;
+            var listId = 'custom-' + key + '-list';
+            var addBtnHTML;
+            if (type === 'text-list') {
+                addBtnHTML = '<button class="add-entry-btn" onclick="addCustomTextItem(this)">+ Add Item</button>';
+            } else {
+                addBtnHTML = '<button class="add-entry-btn" onclick="addCustomKVItem(this)">+ Add Item</button>';
+            }
+            section.innerHTML =
+                '<div class="accordion-header" onclick="toggleAccordion(this)">' +
+                '<span class="drag-handle" onmousedown="startSectionDrag(event, this)">&#8942;&#8942;</span>' +
+                '<h3>' + escHTML(label) + '</h3>' +
+                '<span class="accordion-header-controls"><button class="section-remove-btn" onclick="removeSection(event, this)" title="Remove section">&times;</button><span class="accordion-chevron">&#9660;</span></span>' +
+                '</div>' +
+                '<div class="accordion-body"><div class="accordion-body-inner">' +
+                '<div id="' + listId + '"></div>' +
+                addBtnHTML +
+                '</div></div>';
+            formPanel.insertBefore(section, addBar);
+            var list = document.getElementById(listId);
+            if (items && items.length) {
+                items.forEach(function(item) {
+                    if (type === 'text-list') {
+                        addCustomTextItemToList(list, typeof item === 'string' ? item : '');
+                    } else {
+                        addCustomKVItemToList(list, item.label || '', item.details || '');
+                    }
+                });
+            }
+        }
+
+        function addCustomTextItem(btn) {
+            var list = btn.previousElementSibling;
+            addCustomTextItemToList(list, '');
+            list.lastElementChild.querySelector('input').focus();
+        }
+
+        function addCustomTextItemToList(list, value) {
+            var item = document.createElement('div');
+            item.className = 'highlight-item';
+            item.innerHTML = '<span class="drag-handle" onmousedown="startRowDrag(event, this)">&#8942;&#8942;</span><input type="text" value="' + escAttr(value) + '" /><button onclick="this.parentElement.remove();onFormInput();" title="Remove">&times;</button>';
+            list.appendChild(item);
+        }
+
+        function addCustomKVItem(btn) {
+            var list = btn.previousElementSibling;
+            addCustomKVItemToList(list, '', '');
+            list.lastElementChild.querySelector('input').focus();
+        }
+
+        function addCustomKVItemToList(list, label, details) {
+            var row = document.createElement('div');
+            row.className = 'social-row';
+            row.innerHTML =
+                '<span class="drag-handle" onmousedown="startRowDrag(event, this)">&#8942;&#8942;</span>' +
+                '<div class="form-field"><label>Label</label><input type="text" data-field="label" value="' + escAttr(label) + '" /></div>' +
+                '<div class="form-field"><label>Details</label><input type="text" data-field="details" value="' + escAttr(details) + '" /></div>' +
+                '<button onclick="this.parentElement.remove();onFormInput();" title="Remove">&times;</button>';
             list.appendChild(row);
         }
 
