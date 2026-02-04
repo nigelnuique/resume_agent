@@ -55,7 +55,11 @@ Resume Agent uses a sophisticated multi-step AI workflow to analyze job advertis
 - **File Upload**: Drag-and-drop CV file upload
 - **Easy Downloads**: One-click download of YAML and PDF files
 - **Auto-save**: Automatic saving and rendering on form changes
-- **Raw YAML View**: Optional modal to inspect generated YAML
+- **Form/YAML Toggle**: Switch between structured form editor and raw YAML editor
+- **Drag & Drop Reordering**: Reorder sections and entries by dragging
+- **Section Management**: Remove and restore entire sections as needed
+- **Custom Sections**: Add custom text-list or key-value sections beyond the defaults
+- **Job Ad URL Paste**: Paste a URL to a job posting and the content is fetched automatically
 - **Responsive Design**: Works on desktop and mobile devices
 
 ### 🎨 **Professional Output**
@@ -67,7 +71,7 @@ Resume Agent uses a sophisticated multi-step AI workflow to analyze job advertis
 
 ```bash
 # 1. Clone and setup
-git clone https://github.com/yourusername/Resume_Agent.git
+git clone https://github.com/nigelnuique/Resume_Agent.git
 cd Resume_Agent
 pip install -r requirements.txt
 
@@ -91,7 +95,7 @@ python start_ui.py               # Launch web UI
 ### Step 1: Get the Code
 ```bash
 # Option A: Clone existing repository
-git clone https://github.com/yourusername/Resume_Agent.git
+git clone https://github.com/nigelnuique/Resume_Agent.git
 cd Resume_Agent
 
 # Option B: Create new project
@@ -157,18 +161,21 @@ Resume Agent provides a comprehensive web-based interface for the complete resum
 - 🌐 **Modern Interface**: Clean, intuitive web-based UI
 - 📊 **Progress Tracking**: Real-time updates during AI processing
 - 📝 **Form-Based Editor**: Structured form with collapsible sections for personal info, experience, education, projects, skills, certifications, and extracurricular activities
-- 👁️ **Live Preview**: Real-time PDF preview updates as you edit form fields
+- 🔀 **Form/YAML Toggle**: Switch between structured form and raw YAML editing modes
+- 👁️ **Live Preview**: Real-time PDF preview updates as you edit
+- 🔗 **Job Ad URL Paste**: Paste a job posting URL to auto-fetch its content
+- ↕️ **Drag & Drop**: Reorder sections, entries, highlights, and skills by dragging
+- ➕ **Section Management**: Remove, restore, and add custom sections
 - 📁 **File Upload**: Drag-and-drop CV file upload
 - 💾 **Easy Downloads**: One-click download of YAML and PDF files
 - 🔄 **Auto-save**: Automatic saving and rendering (1.5s debounce)
 - 📱 **Responsive**: Works on desktop and mobile devices
-- { } **Raw YAML View**: Optional modal to inspect the generated YAML
 
 **Workflow Steps**:
 1. **Upload Master CV**: Either upload a YAML file or use the provided template
-2. **Add Job Advertisement**: Paste the complete job posting text
+2. **Add Job Advertisement**: Paste the complete job posting text, or paste a URL to auto-fetch the content
 3. **AI Processing**: Watch real-time progress as AI analyzes and tailors your resume
-4. **Edit & Refine**: Use the form-based editor to adjust fields, reorder entries, and add/remove highlights
+4. **Edit & Refine**: Use the form editor (or switch to raw YAML mode) to adjust fields, drag to reorder entries, remove/restore sections, and add custom sections
 5. **Download Results**: Get both YAML and PDF versions of your tailored resume
 
 ## Configuration
@@ -412,7 +419,7 @@ git add .
 git commit -m "Initial commit - Resume Agent"
 
 # Create GitHub repository, then:
-git remote add origin https://github.com/yourusername/Resume_Agent.git
+git remote add origin https://github.com/nigelnuique/Resume_Agent.git
 git branch -M main
 git push -u origin main
 ```

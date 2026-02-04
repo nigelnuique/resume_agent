@@ -27,10 +27,12 @@ The resume editing experience is now **fully automatic** with real-time change d
 - **No buttons needed**: Everything happens automatically
 - **Responsive feedback**: Clear status indicators
 - **Smooth editing**: No interruptions or blocking
+- **Form/YAML toggle**: Switch between structured form and raw YAML editor, both trigger auto-rendering
+- **Drag & drop reordering**: Reorder sections and entries by dragging, changes render automatically
 
 ## 🚀 How It Works
 
-1. **Edit your resume** using the form-based editor (or any field in an accordion section)
+1. **Edit your resume** using the form-based editor, raw YAML editor, or drag to reorder
 2. **Stop editing** for 1.5 seconds
 3. **System automatically**:
    - Builds YAML from form fields

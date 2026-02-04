@@ -80,7 +80,7 @@ resume_agent/
 ├── 📁 rendercv_output/        # Generated output files
 ├── 🐍 state.py               # State management and types
 ├── 🐍 run.py                 # Workflow orchestration
-├── 🌐 resume_agent_ui.py     # Web interface (form-based editor)
+├── 🌐 resume_agent_ui.py     # Web interface (form/YAML editor, drag-drop, custom sections, URL fetch)
 ├── 🐍 start_ui.py            # Web UI launcher
 └── 🐍 setup_env.py           # Environment setup utilities
 ```
@@ -90,7 +90,7 @@ resume_agent/
 | File | Purpose | Dependencies |
 |------|---------|--------------|
 | `state.py` | State management and type definitions | PyYAML, typing |
-| `resume_agent_ui.py` | Web interface and workflow orchestration | Flask, LangGraph, all nodes |
+| `resume_agent_ui.py` | Web interface (form/YAML toggle, drag-drop reorder, section management, custom sections, job URL fetch) | Flask, LangGraph, requests, all nodes |
 | `start_ui.py` | Web UI launcher with setup | Flask |
 | `nodes/*.py` | Individual processing nodes | OpenAI, state |
 | `utils/*.py` | Shared utility functions | Various |
@@ -518,7 +518,7 @@ CMD ["python", "start_ui.py"]
 
 1. **Fork and Clone**
    ```bash
-   git clone https://github.com/yourusername/resume_agent.git
+   git clone https://github.com/nigelnuique/resume_agent.git
    cd resume_agent
    ```
 
@@ -635,6 +635,6 @@ setup_interactive_workflow() -> Dict[str, Callable]
 
 ---
 
-**🚀 Ready to contribute?** Check out our [issues page](https://github.com/yourusername/resume_agent/issues) for tasks that need help, or propose new features!
+**🚀 Ready to contribute?** Check out our [issues page](https://github.com/nigelnuique/resume_agent/issues) for tasks that need help, or propose new features!
 
 *Happy coding! 🎉* 

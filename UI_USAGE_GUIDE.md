@@ -19,7 +19,7 @@
 ### Step 1: Input Your Data
 
 1. **Master CV**: Upload your CV file (.yaml/.yml) or paste YAML content directly
-2. **Job Advertisement**: Copy and paste the complete job posting
+2. **Job Advertisement**: Copy and paste the complete job posting, or paste a URL to auto-fetch the job ad content
 3. **Click "Process with AI"**: The system will analyze and tailor your resume
 
 ### AI Processing (Automatic)
@@ -35,11 +35,13 @@ Watch the progress bar as the AI:
 
 Once AI processing completes:
 - **Left Panel**: Form-based editor with collapsible accordion sections for each part of your CV (personal info, summary, experience, education, projects, skills, certifications, extracurricular)
+- **Form/YAML Toggle**: Switch between the structured form editor and a raw YAML editor using the toggle buttons at the top
 - **Right Panel**: Live PDF preview updates automatically as you edit
 - **Auto-save**: Changes save and re-render after 1.5 seconds of inactivity
-- **Reorder**: Use up/down arrows to reorder experience, education, and project entries
+- **Drag & Drop**: Drag sections, entries, highlights, and skills to reorder them
 - **Add/Remove**: Add or remove entries, highlights, social networks, and skills inline
-- **Raw YAML**: Click "Show Raw YAML" to inspect the generated YAML in a modal
+- **Remove/Restore Sections**: Remove entire sections with the X button; restore them from the chip bar at the bottom
+- **Custom Sections**: Add new custom sections (text-list or key-value type) beyond the built-in ones
 - **Download**: Get your final resume in YAML and PDF formats
 
 ## Key Features
@@ -48,6 +50,21 @@ Once AI processing completes:
 - PDF preview refreshes as you edit form fields
 - Structured form inputs for each CV section
 - Accordion-style collapsible sections
+- Switch between Form and YAML editing modes
+
+### ↕️ Drag & Drop Reordering
+- Drag entire sections to change their order in the resume
+- Drag individual entries (experience, education, projects) to reorder
+- Drag highlights, skills, certifications, and other list items
+
+### ➕ Section Management
+- Remove sections you don't need with the X button on the section header
+- Restore removed sections from the chip bar at the bottom of the form
+- Add custom sections with either text-list or key-value format
+
+### 🔗 Job Ad URL Paste
+- Paste a URL into the job advertisement field to auto-fetch the page content
+- Falls back to the pasted URL text if the page can't be parsed
 
 ### 📁 File Management
 - Upload CV files directly
@@ -68,16 +85,19 @@ Once AI processing completes:
 - Keep content accurate and comprehensive
 
 ### Job Advertisement Input
-- Copy the complete job posting (not just requirements)
+- Copy the complete job posting (not just requirements), or paste a URL to the job posting
 - Include company information if available
 - Don't edit or summarize the job ad
 
 ### Final Editing
 - Review AI changes in each accordion section
 - Use the form fields to adjust content directly
-- Reorder entries with up/down arrow buttons
+- Drag entries to reorder them within their section
+- Drag sections to reorder them in the resume
 - Add or remove highlights as needed
-- Click "Show Raw YAML" to verify the generated structure
+- Remove sections you don't need; restore them later from the chip bar
+- Add custom sections for content not covered by the defaults
+- Switch to YAML mode to inspect or edit the raw YAML directly
 
 ## Troubleshooting
 
