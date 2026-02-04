@@ -5,6 +5,7 @@ Combines AI-powered tailoring with manual editing capabilities
 """
 
 import os
+import re as _re
 import json
 import copy
 import threading
@@ -16,10 +17,43 @@ import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import cast
+from html.parser import HTMLParser
 from flask import Flask, render_template_string, request, jsonify, send_file, Response
 from flask_socketio import SocketIO, emit
 import yaml
+import requests as _requests
 from dotenv import load_dotenv
+
+
+# ── HTML-to-text helper for URL fetching ──
+class _HTMLTextExtractor(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.result = []
+        self.skip = False
+
+    def handle_starttag(self, tag, attrs):
+        if tag in ('script', 'style', 'noscript', 'header', 'footer', 'nav'):
+            self.skip = True
+
+    def handle_endtag(self, tag):
+        if tag in ('script', 'style', 'noscript', 'header', 'footer', 'nav'):
+            self.skip = False
+        if tag in ('p', 'br', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'tr', 'dt', 'dd'):
+            self.result.append('\n')
+
+    def handle_data(self, data):
+        if not self.skip:
+            self.result.append(data)
+
+
+def _html_to_text(html_content):
+    parser = _HTMLTextExtractor()
+    parser.feed(html_content)
+    text = ''.join(parser.result)
+    text = _re.sub(r'\n{3,}', '\n\n', text)
+    text = _re.sub(r'[ \t]+', ' ', text)
+    return text.strip()
 
 # Import resume agent components
 from state import ResumeState, create_initial_state, save_cv_to_file, load_cv_from_file
@@ -957,6 +991,61 @@ UI_HTML = """
         .form-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
         .form-panel::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
+        .yaml-edit-panel {
+            width: 50%;
+            display: none;
+            border-right: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .yaml-edit-panel textarea {
+            width: 100%;
+            height: 100%;
+            background: #0f0f0f;
+            color: #a5d6ff;
+            border: none;
+            padding: 16px;
+            font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .yaml-edit-panel textarea:focus {
+            outline: none;
+        }
+
+        .editor-mode-toggle {
+            display: flex;
+            background: rgba(255,255,255,0.04);
+            border-radius: 8px;
+            padding: 3px;
+            gap: 2px;
+        }
+
+        .editor-mode-toggle button {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 6px;
+            background: none;
+            color: #71717a;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .editor-mode-toggle button.active {
+            background: rgba(59,130,246,0.15);
+            color: #60a5fa;
+        }
+
+        .editor-mode-toggle button:hover:not(.active) {
+            color: #a1a1aa;
+        }
+
         .preview-panel {
             width: 50%;
             background: #f8f9fa;
@@ -997,6 +1086,84 @@ UI_HTML = """
 
         .accordion-header:hover {
             background: rgba(255,255,255,0.03);
+        }
+
+        .accordion-header .drag-handle {
+            margin-right: 4px;
+        }
+
+        .accordion-header-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: auto;
+        }
+
+        .section-remove-btn {
+            background: none;
+            border: 1px solid rgba(255,255,255,0.06);
+            color: #52525b;
+            width: 24px;
+            height: 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.15s;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .section-remove-btn:hover {
+            background: rgba(239,68,68,0.15);
+            color: #f87171;
+            border-color: rgba(239,68,68,0.3);
+        }
+
+        .add-section-bar {
+            padding: 12px 20px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            display: none;
+        }
+
+        .add-section-bar.visible {
+            display: block;
+        }
+
+        .add-section-bar-label {
+            font-size: 12px;
+            color: #52525b;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .add-section-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .add-section-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(59,130,246,0.08);
+            border: 1px dashed rgba(59,130,246,0.25);
+            color: #60a5fa;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .add-section-chip:hover {
+            background: rgba(59,130,246,0.15);
+            border-color: rgba(59,130,246,0.4);
         }
 
         .accordion-header h3 {
@@ -1098,6 +1265,41 @@ UI_HTML = """
         }
 
         /* ── Repeatable Entries ── */
+        /* ── Drag & Drop ── */
+        .drag-handle {
+            cursor: grab;
+            color: #3f3f46;
+            font-size: 16px;
+            padding: 2px 4px;
+            user-select: none;
+            display: inline-flex;
+            align-items: center;
+            flex-shrink: 0;
+            line-height: 1;
+            letter-spacing: -2px;
+            transition: color 0.15s;
+        }
+
+        .drag-handle:hover {
+            color: #71717a;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .dragging {
+            opacity: 0.4;
+        }
+
+        .drag-over-above {
+            box-shadow: 0 -2px 0 0 #3b82f6;
+        }
+
+        .drag-over-below {
+            box-shadow: 0 2px 0 0 #3b82f6;
+        }
+
         .repeatable-entry {
             background: rgba(255,255,255,0.02);
             border: 1px solid rgba(255,255,255,0.06);
@@ -1268,80 +1470,6 @@ UI_HTML = """
             color: #f87171;
         }
 
-        /* ── YAML Modal ── */
-        .yaml-modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 9000;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(4px);
-            align-items: center;
-            justify-content: center;
-        }
-
-        .yaml-modal.open {
-            display: flex;
-        }
-
-        .yaml-modal-content {
-            background: #18181b;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 14px;
-            width: 700px;
-            max-width: 90vw;
-            max-height: 80vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .yaml-modal-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 16px 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-        }
-
-        .yaml-modal-header h3 {
-            font-size: 15px;
-            color: #e4e4e7;
-        }
-
-        .yaml-modal-close {
-            background: none;
-            border: none;
-            color: #71717a;
-            font-size: 22px;
-            cursor: pointer;
-            padding: 0;
-            line-height: 1;
-        }
-
-        .yaml-modal-close:hover { color: #e4e4e7; }
-
-        .yaml-modal-body {
-            flex: 1;
-            overflow: auto;
-            padding: 0;
-        }
-
-        .yaml-modal-body textarea {
-            width: 100%;
-            height: 100%;
-            min-height: 400px;
-            background: #0f0f0f;
-            color: #a5d6ff;
-            border: none;
-            padding: 16px;
-            font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
-            font-size: 13px;
-            line-height: 1.6;
-            resize: none;
-            outline: none;
-        }
-
         /* ── Design Theme Select ── */
         .theme-select-row {
             padding: 14px 20px;
@@ -1433,11 +1561,13 @@ UI_HTML = """
             }
 
             .form-panel,
+            .yaml-edit-panel,
             .preview-panel {
                 width: 100%;
             }
 
-            .form-panel {
+            .form-panel,
+            .yaml-edit-panel {
                 border-right: none;
                 border-bottom: 1px solid rgba(255,255,255,0.06);
                 max-height: 500px;
@@ -1586,9 +1716,10 @@ UI_HTML = """
                     <div class="editor-status info" id="editor-status">Ready</div>
                 </div>
                 <div class="editor-header-right">
-                    <button class="btn btn-secondary" onclick="openYAMLModal()">
-                        { } Show Raw YAML
-                    </button>
+                    <div class="editor-mode-toggle">
+                        <button id="mode-form-btn" class="active" onclick="switchToForm()">Form</button>
+                        <button id="mode-yaml-btn" onclick="switchToYAML()">YAML</button>
+                    </div>
                     <button class="btn btn-download" onclick="downloadYAML()" title="Download YAML">
                         &#11123; Download YAML
                     </button>
@@ -1615,6 +1746,7 @@ UI_HTML = """
                     <!-- Personal Info -->
                     <div class="accordion-section open" data-section="personal">
                         <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <span class="drag-handle" onmousedown="startSectionDrag(event, this)">&#8942;&#8942;</span>
                             <h3>Personal Info</h3>
                             <span class="accordion-chevron">&#9660;</span>
                         </div>
@@ -1637,10 +1769,11 @@ UI_HTML = """
                     </div>
 
                     <!-- Professional Summary -->
-                    <div class="accordion-section open" data-section="summary">
+                    <div class="accordion-section open" data-section="summary" data-label="Professional Summary">
                         <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <span class="drag-handle" onmousedown="startSectionDrag(event, this)">&#8942;&#8942;</span>
                             <h3>Professional Summary</h3>
-                            <span class="accordion-chevron">&#9660;</span>
+                            <span class="accordion-header-controls"><button class="section-remove-btn" onclick="removeSection(event, this)" title="Remove section">&times;</button><span class="accordion-chevron">&#9660;</span></span>
                         </div>
                         <div class="accordion-body"><div class="accordion-body-inner">
                             <div class="form-field">
@@ -1650,10 +1783,11 @@ UI_HTML = """
                     </div>
 
                     <!-- Experience -->
-                    <div class="accordion-section" data-section="experience">
+                    <div class="accordion-section" data-section="experience" data-label="Experience">
                         <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <span class="drag-handle" onmousedown="startSectionDrag(event, this)">&#8942;&#8942;</span>
                             <h3>Experience</h3>
-                            <span class="accordion-chevron">&#9660;</span>
+                            <span class="accordion-header-controls"><button class="section-remove-btn" onclick="removeSection(event, this)" title="Remove section">&times;</button><span class="accordion-chevron">&#9660;</span></span>
                         </div>
                         <div class="accordion-body"><div class="accordion-body-inner">
                             <div id="experience-list"></div>
@@ -1662,10 +1796,11 @@ UI_HTML = """
                     </div>
 
                     <!-- Education -->
-                    <div class="accordion-section" data-section="education">
+                    <div class="accordion-section" data-section="education" data-label="Education">
                         <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <span class="drag-handle" onmousedown="startSectionDrag(event, this)">&#8942;&#8942;</span>
                             <h3>Education</h3>
-                            <span class="accordion-chevron">&#9660;</span>
+                            <span class="accordion-header-controls"><button class="section-remove-btn" onclick="removeSection(event, this)" title="Remove section">&times;</button><span class="accordion-chevron">&#9660;</span></span>
                         </div>
                         <div class="accordion-body"><div class="accordion-body-inner">
                             <div id="education-list"></div>
@@ -1674,10 +1809,11 @@ UI_HTML = """
                     </div>
 
                     <!-- Projects -->
-                    <div class="accordion-section" data-section="projects">
+                    <div class="accordion-section" data-section="projects" data-label="Projects">
                         <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <span class="drag-handle" onmousedown="startSectionDrag(event, this)">&#8942;&#8942;</span>
                             <h3>Projects</h3>
-                            <span class="accordion-chevron">&#9660;</span>
+                            <span class="accordion-header-controls"><button class="section-remove-btn" onclick="removeSection(event, this)" title="Remove section">&times;</button><span class="accordion-chevron">&#9660;</span></span>
                         </div>
                         <div class="accordion-body"><div class="accordion-body-inner">
                             <div id="projects-list"></div>
@@ -1686,10 +1822,11 @@ UI_HTML = """
                     </div>
 
                     <!-- Skills -->
-                    <div class="accordion-section" data-section="skills">
+                    <div class="accordion-section" data-section="skills" data-label="Skills">
                         <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <span class="drag-handle" onmousedown="startSectionDrag(event, this)">&#8942;&#8942;</span>
                             <h3>Skills</h3>
-                            <span class="accordion-chevron">&#9660;</span>
+                            <span class="accordion-header-controls"><button class="section-remove-btn" onclick="removeSection(event, this)" title="Remove section">&times;</button><span class="accordion-chevron">&#9660;</span></span>
                         </div>
                         <div class="accordion-body"><div class="accordion-body-inner">
                             <div id="skills-list"></div>
@@ -1698,10 +1835,11 @@ UI_HTML = """
                     </div>
 
                     <!-- Certifications -->
-                    <div class="accordion-section" data-section="certifications">
+                    <div class="accordion-section" data-section="certifications" data-label="Certifications">
                         <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <span class="drag-handle" onmousedown="startSectionDrag(event, this)">&#8942;&#8942;</span>
                             <h3>Certifications</h3>
-                            <span class="accordion-chevron">&#9660;</span>
+                            <span class="accordion-header-controls"><button class="section-remove-btn" onclick="removeSection(event, this)" title="Remove section">&times;</button><span class="accordion-chevron">&#9660;</span></span>
                         </div>
                         <div class="accordion-body"><div class="accordion-body-inner">
                             <div id="certifications-list"></div>
@@ -1710,10 +1848,11 @@ UI_HTML = """
                     </div>
 
                     <!-- Extracurricular -->
-                    <div class="accordion-section" data-section="extracurricular">
+                    <div class="accordion-section" data-section="extracurricular" data-label="Extracurricular">
                         <div class="accordion-header" onclick="toggleAccordion(this)">
+                            <span class="drag-handle" onmousedown="startSectionDrag(event, this)">&#8942;&#8942;</span>
                             <h3>Extracurricular</h3>
-                            <span class="accordion-chevron">&#9660;</span>
+                            <span class="accordion-header-controls"><button class="section-remove-btn" onclick="removeSection(event, this)" title="Remove section">&times;</button><span class="accordion-chevron">&#9660;</span></span>
                         </div>
                         <div class="accordion-body"><div class="accordion-body-inner">
                             <div id="extracurricular-list"></div>
@@ -1721,6 +1860,16 @@ UI_HTML = """
                         </div></div>
                     </div>
 
+                    <!-- Add removed sections back -->
+                    <div class="add-section-bar" id="add-section-bar">
+                        <div class="add-section-bar-label">Removed sections</div>
+                        <div class="add-section-chips" id="add-section-chips"></div>
+                    </div>
+
+                </div>
+
+                <div class="yaml-edit-panel" id="yaml-edit-panel">
+                    <textarea id="yaml-raw-editor" spellcheck="false" placeholder="Edit YAML directly..."></textarea>
                 </div>
 
                 <div class="preview-panel">
@@ -1734,19 +1883,6 @@ UI_HTML = """
 
         <!-- Hidden textarea to hold YAML for init -->
         <textarea id="yaml-editor" style="display:none;">{{ working_cv_content }}</textarea>
-
-        <!-- Raw YAML Modal -->
-        <div class="yaml-modal" id="yaml-modal">
-            <div class="yaml-modal-content">
-                <div class="yaml-modal-header">
-                    <h3>Raw YAML</h3>
-                    <button class="yaml-modal-close" onclick="closeYAMLModal()">&times;</button>
-                </div>
-                <div class="yaml-modal-body">
-                    <textarea id="yaml-modal-text" readonly></textarea>
-                </div>
-            </div>
-        </div>
     </div>
 
     <div class="footer">
@@ -1758,6 +1894,7 @@ UI_HTML = """
         let saveTimeout;
         let isRendering = false;
         let formReady = false;
+        let editorMode = 'form';
         const completedSteps = new Set();
 
         /* ── Toast System ── */
@@ -1828,6 +1965,39 @@ UI_HTML = """
                 reader.readAsText(file);
             }
         })();
+
+        /* ── Job Ad URL paste detection ── */
+        document.getElementById('job-ad').addEventListener('paste', function() {
+            var el = document.getElementById('job-ad');
+            setTimeout(function() {
+                var val = el.value.trim();
+                if (/^https?:\/\/[^\s]+$/.test(val)) {
+                    el.value = 'Fetching job posting from URL...';
+                    el.disabled = true;
+                    fetch('/api/fetch-url', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: val })
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        el.disabled = false;
+                        if (data.success && data.text) {
+                            el.value = data.text;
+                            showToast('Job posting fetched from URL', 'success');
+                        } else {
+                            el.value = val;
+                            showToast('Could not parse URL, using raw link', 'info');
+                        }
+                    })
+                    .catch(function() {
+                        el.disabled = false;
+                        el.value = val;
+                        showToast('Could not fetch URL, using raw link', 'info');
+                    });
+                }
+            }, 100);
+        });
 
         /* ── AI Processing ── */
         function startAIProcessing() {
@@ -1950,90 +2120,100 @@ UI_HTML = """
             });
             if (socials.length) cv.social_networks = socials;
 
-            /* Sections */
+            /* Sections - iterate in DOM order to respect drag reordering */
             cv.sections = {};
 
-            /* Professional summary */
-            var summary = document.getElementById('cv-summary').value.trim();
-            if (summary) cv.sections.professional_summary = [summary];
+            var sectionBuilders = {
+                summary: function(s) {
+                    var summary = document.getElementById('cv-summary').value.trim();
+                    if (summary) s.professional_summary = [summary];
+                },
+                experience: function(s) {
+                    var items = [];
+                    document.querySelectorAll('#experience-list .repeatable-entry').forEach(function(entry) {
+                        var e = {};
+                        e.company = entry.querySelector('[data-field=company]').value || '';
+                        e.position = entry.querySelector('[data-field=position]').value || '';
+                        e.start_date = entry.querySelector('[data-field=start_date]').value || '';
+                        e.end_date = entry.querySelector('[data-field=end_date]').value || '';
+                        e.location = entry.querySelector('[data-field=location]').value || '';
+                        var hl = [];
+                        entry.querySelectorAll('.highlight-item input').forEach(function(inp) {
+                            if (inp.value.trim()) hl.push(inp.value.trim());
+                        });
+                        if (hl.length) e.highlights = hl;
+                        items.push(e);
+                    });
+                    if (items.length) s.experience = items;
+                },
+                education: function(s) {
+                    var items = [];
+                    document.querySelectorAll('#education-list .repeatable-entry').forEach(function(entry) {
+                        var e = {};
+                        e.institution = entry.querySelector('[data-field=institution]').value || '';
+                        e.area = entry.querySelector('[data-field=area]').value || '';
+                        e.degree = entry.querySelector('[data-field=degree]').value || '';
+                        e.start_date = entry.querySelector('[data-field=start_date]').value || '';
+                        e.end_date = entry.querySelector('[data-field=end_date]').value || '';
+                        e.location = entry.querySelector('[data-field=location]').value || '';
+                        var hl = [];
+                        entry.querySelectorAll('.highlight-item input').forEach(function(inp) {
+                            if (inp.value.trim()) hl.push(inp.value.trim());
+                        });
+                        if (hl.length) e.highlights = hl;
+                        items.push(e);
+                    });
+                    if (items.length) s.education = items;
+                },
+                projects: function(s) {
+                    var items = [];
+                    document.querySelectorAll('#projects-list .repeatable-entry').forEach(function(entry) {
+                        var p = {};
+                        p.name = entry.querySelector('[data-field=name]').value || '';
+                        p.end_date = entry.querySelector('[data-field=end_date]').value || '';
+                        p.summary = entry.querySelector('[data-field=summary]').value || '';
+                        var hl = [];
+                        entry.querySelectorAll('.highlight-item input').forEach(function(inp) {
+                            if (inp.value.trim()) hl.push(inp.value.trim());
+                        });
+                        if (hl.length) p.highlights = hl;
+                        items.push(p);
+                    });
+                    if (items.length) s.projects = items;
+                },
+                skills: function(s) {
+                    var items = [];
+                    document.querySelectorAll('#skills-list .social-row').forEach(function(row) {
+                        var label = row.querySelector('[data-field=label]').value || '';
+                        var details = row.querySelector('[data-field=details]').value || '';
+                        if (label) items.push({ label: label, details: details });
+                    });
+                    if (items.length) s.skills = items;
+                },
+                certifications: function(s) {
+                    var items = [];
+                    document.querySelectorAll('#certifications-list .highlight-item input').forEach(function(inp) {
+                        if (inp.value.trim()) items.push(inp.value.trim());
+                    });
+                    if (items.length) s.certifications = items;
+                },
+                extracurricular: function(s) {
+                    var items = [];
+                    document.querySelectorAll('#extracurricular-list .social-row').forEach(function(row) {
+                        var label = row.querySelector('[data-field=label]').value || '';
+                        var details = row.querySelector('[data-field=details]').value || '';
+                        if (label) items.push({ label: label, details: details });
+                    });
+                    if (items.length) s.extracurricular = items;
+                }
+            };
 
-            /* Experience */
-            var experiences = [];
-            document.querySelectorAll('#experience-list .repeatable-entry').forEach(function(entry) {
-                var e = {};
-                e.company = entry.querySelector('[data-field=company]').value || '';
-                e.position = entry.querySelector('[data-field=position]').value || '';
-                e.start_date = entry.querySelector('[data-field=start_date]').value || '';
-                e.end_date = entry.querySelector('[data-field=end_date]').value || '';
-                e.location = entry.querySelector('[data-field=location]').value || '';
-                var hl = [];
-                entry.querySelectorAll('.highlight-item input').forEach(function(inp) {
-                    if (inp.value.trim()) hl.push(inp.value.trim());
-                });
-                if (hl.length) e.highlights = hl;
-                experiences.push(e);
+            /* Build sections in current DOM order */
+            document.querySelectorAll('#form-panel .accordion-section').forEach(function(sec) {
+                var key = sec.dataset.section;
+                if (key === 'personal') return;
+                if (sectionBuilders[key]) sectionBuilders[key](cv.sections);
             });
-            if (experiences.length) cv.sections.experience = experiences;
-
-            /* Education */
-            var educations = [];
-            document.querySelectorAll('#education-list .repeatable-entry').forEach(function(entry) {
-                var e = {};
-                e.institution = entry.querySelector('[data-field=institution]').value || '';
-                e.area = entry.querySelector('[data-field=area]').value || '';
-                e.degree = entry.querySelector('[data-field=degree]').value || '';
-                e.start_date = entry.querySelector('[data-field=start_date]').value || '';
-                e.end_date = entry.querySelector('[data-field=end_date]').value || '';
-                e.location = entry.querySelector('[data-field=location]').value || '';
-                var hl = [];
-                entry.querySelectorAll('.highlight-item input').forEach(function(inp) {
-                    if (inp.value.trim()) hl.push(inp.value.trim());
-                });
-                if (hl.length) e.highlights = hl;
-                educations.push(e);
-            });
-            if (educations.length) cv.sections.education = educations;
-
-            /* Projects */
-            var projects = [];
-            document.querySelectorAll('#projects-list .repeatable-entry').forEach(function(entry) {
-                var p = {};
-                p.name = entry.querySelector('[data-field=name]').value || '';
-                p.end_date = entry.querySelector('[data-field=end_date]').value || '';
-                p.summary = entry.querySelector('[data-field=summary]').value || '';
-                var hl = [];
-                entry.querySelectorAll('.highlight-item input').forEach(function(inp) {
-                    if (inp.value.trim()) hl.push(inp.value.trim());
-                });
-                if (hl.length) p.highlights = hl;
-                projects.push(p);
-            });
-            if (projects.length) cv.sections.projects = projects;
-
-            /* Skills */
-            var skills = [];
-            document.querySelectorAll('#skills-list .social-row').forEach(function(row) {
-                var label = row.querySelector('[data-field=label]').value || '';
-                var details = row.querySelector('[data-field=details]').value || '';
-                if (label) skills.push({ label: label, details: details });
-            });
-            if (skills.length) cv.sections.skills = skills;
-
-            /* Certifications */
-            var certs = [];
-            document.querySelectorAll('#certifications-list .highlight-item input').forEach(function(inp) {
-                if (inp.value.trim()) certs.push(inp.value.trim());
-            });
-            if (certs.length) cv.sections.certifications = certs;
-
-            /* Extracurricular */
-            var extras = [];
-            document.querySelectorAll('#extracurricular-list .social-row').forEach(function(row) {
-                var label = row.querySelector('[data-field=label]').value || '';
-                var details = row.querySelector('[data-field=details]').value || '';
-                if (label) extras.push({ label: label, details: details });
-            });
-            if (extras.length) cv.sections.extracurricular = extras;
 
             /* Design */
             obj.design = { theme: document.getElementById('design-theme').value };
@@ -2106,6 +2286,34 @@ UI_HTML = """
                 document.getElementById('extracurricular-list').innerHTML = '';
                 (sections.extracurricular || []).forEach(function(e) { addExtracurricularRow(e.label, e.details); });
 
+                /* Restore any previously removed sections that are in the YAML */
+                var sectionMap = { professional_summary: 'summary' };
+                var yamlSectionKeys = Object.keys(sections);
+                var yamlDomKeys = yamlSectionKeys.map(function(k) { return sectionMap[k] || k; });
+                Object.keys(removedSections).forEach(function(key) {
+                    if (yamlDomKeys.indexOf(key) !== -1) {
+                        restoreSection(key);
+                    }
+                });
+
+                /* Reorder accordion sections to match YAML section order */
+                var formPanel = document.getElementById('form-panel');
+                var addBar = document.getElementById('add-section-bar');
+                var allSections = formPanel.querySelectorAll('.accordion-section');
+                var sectionByKey = {};
+                allSections.forEach(function(s) { sectionByKey[s.dataset.section] = s; });
+                /* Personal always stays first */
+                if (sectionByKey.personal) formPanel.insertBefore(sectionByKey.personal, addBar);
+                /* Then add sections in YAML order */
+                yamlDomKeys.forEach(function(domKey) {
+                    if (sectionByKey[domKey]) formPanel.insertBefore(sectionByKey[domKey], addBar);
+                });
+                /* Append any remaining sections not in YAML */
+                allSections.forEach(function(s) {
+                    if (!s.parentElement) return;
+                    formPanel.insertBefore(s, addBar);
+                });
+
                 /* Design theme */
                 if (data.design && data.design.theme) {
                     document.getElementById('design-theme').value = data.design.theme;
@@ -2126,6 +2334,7 @@ UI_HTML = """
             var row = document.createElement('div');
             row.className = 'social-row';
             row.innerHTML =
+                '<span class="drag-handle" onmousedown="startRowDrag(event, this)">&#8942;&#8942;</span>' +
                 '<div class="form-field"><select>' +
                 '<option value="LinkedIn">LinkedIn</option>' +
                 '<option value="GitHub">GitHub</option>' +
@@ -2148,7 +2357,7 @@ UI_HTML = """
         function buildHighlightHTML(highlights) {
             var html = '<div class="form-field"><label>Highlights</label><div class="highlight-list">';
             (highlights || []).forEach(function(h) {
-                html += '<div class="highlight-item"><input type="text" value="' + escAttr(h) + '" /><button onclick="this.parentElement.remove();onFormInput();" title="Remove">&times;</button></div>';
+                html += '<div class="highlight-item"><span class="drag-handle" onmousedown="startRowDrag(event, this)">&#8942;&#8942;</span><input type="text" value="' + escAttr(h) + '" /><button onclick="this.parentElement.remove();onFormInput();" title="Remove">&times;</button></div>';
             });
             html += '</div><button class="add-highlight-btn" onclick="addHighlight(this)">+ Add highlight</button></div>';
             return html;
@@ -2158,26 +2367,156 @@ UI_HTML = """
             var list = btn.previousElementSibling;
             var item = document.createElement('div');
             item.className = 'highlight-item';
-            item.innerHTML = '<input type="text" /><button onclick="this.parentElement.remove();onFormInput();" title="Remove">&times;</button>';
+            item.innerHTML = '<span class="drag-handle" onmousedown="startRowDrag(event, this)">&#8942;&#8942;</span><input type="text" /><button onclick="this.parentElement.remove();onFormInput();" title="Remove">&times;</button>';
             list.appendChild(item);
             item.querySelector('input').focus();
         }
 
-        /* Reorder helpers */
-        function moveEntry(btn, dir) {
-            var entry = btn.closest('.repeatable-entry');
-            var parent = entry.parentElement;
-            if (dir === -1 && entry.previousElementSibling) {
-                parent.insertBefore(entry, entry.previousElementSibling);
-            } else if (dir === 1 && entry.nextElementSibling) {
-                parent.insertBefore(entry.nextElementSibling, entry);
+        /* ── Drag & Drop System ── */
+        var dragState = { el: null, container: null, itemSel: null };
+
+        function clearDragIndicators() {
+            document.querySelectorAll('.drag-over-above,.drag-over-below').forEach(function(el) {
+                el.classList.remove('drag-over-above', 'drag-over-below');
+            });
+        }
+
+        function handleDragOver(e) {
+            if (!dragState.el) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            var target = e.target.closest(dragState.itemSel);
+            if (!target || target === dragState.el || target.parentElement !== dragState.container) return;
+            clearDragIndicators();
+            var rect = target.getBoundingClientRect();
+            if (e.clientY < rect.top + rect.height / 2) {
+                target.classList.add('drag-over-above');
+            } else {
+                target.classList.add('drag-over-below');
             }
+        }
+
+        function handleDrop(e) {
+            if (!dragState.el) return;
+            e.preventDefault();
+            var target = e.target.closest(dragState.itemSel);
+            if (!target || target === dragState.el) { cleanupDrag(); return; }
+            var rect = target.getBoundingClientRect();
+            if (e.clientY < rect.top + rect.height / 2) {
+                dragState.container.insertBefore(dragState.el, target);
+            } else {
+                dragState.container.insertBefore(dragState.el, target.nextSibling);
+            }
+            cleanupDrag();
             onFormInput();
+        }
+
+        function handleDragEnd() {
+            cleanupDrag();
+        }
+
+        function cleanupDrag() {
+            clearDragIndicators();
+            if (dragState.el) {
+                dragState.el.classList.remove('dragging');
+                dragState.el.removeAttribute('draggable');
+                dragState.el.removeEventListener('dragend', handleDragEnd);
+            }
+            dragState.el = null;
+            dragState.container = null;
+            dragState.itemSel = null;
+            document.removeEventListener('dragover', handleDragOver);
+            document.removeEventListener('drop', handleDrop);
+        }
+
+        function initDrag(el, container, itemSelector) {
+            cleanupDrag();
+            dragState.el = el;
+            dragState.container = container;
+            dragState.itemSel = itemSelector;
+            el.setAttribute('draggable', 'true');
+            el.classList.add('dragging');
+            document.addEventListener('dragover', handleDragOver);
+            document.addEventListener('drop', handleDrop);
+            el.addEventListener('dragend', handleDragEnd);
+        }
+
+        /* Section drag (accordion sections within form-panel) */
+        function startSectionDrag(e, handle) {
+            e.stopPropagation();
+            var section = handle.closest('.accordion-section');
+            var container = document.getElementById('form-panel');
+            initDrag(section, container, '.accordion-section');
+        }
+
+        /* Entry drag (repeatable entries within their list) */
+        function startEntryDrag(e, handle) {
+            e.stopPropagation();
+            var entry = handle.closest('.repeatable-entry');
+            var container = entry.parentElement;
+            initDrag(entry, container, '.repeatable-entry');
+        }
+
+        /* Row drag (social-row, highlight-item within their list) */
+        function startRowDrag(e, handle) {
+            e.stopPropagation();
+            var item = handle.parentElement;
+            var container = item.parentElement;
+            var selector = '.' + item.className.split(' ')[0];
+            initDrag(item, container, selector);
         }
 
         function toggleEntryCollapse(el) {
             var entry = el.closest('.repeatable-entry');
             if (entry) entry.classList.toggle('collapsed');
+        }
+
+        /* ── Section Remove / Restore ── */
+        var removedSections = {};
+
+        function removeSection(e, btn) {
+            e.stopPropagation();
+            var section = btn.closest('.accordion-section');
+            var key = section.dataset.section;
+            var label = section.dataset.label || key;
+            removedSections[key] = section;
+            section.remove();
+            updateAddSectionBar();
+            onFormInput();
+            showToast(label + ' section removed', 'info', 3000);
+        }
+
+        function restoreSection(key) {
+            var section = removedSections[key];
+            if (!section) return;
+            var formPanel = document.getElementById('form-panel');
+            var addBar = document.getElementById('add-section-bar');
+            formPanel.insertBefore(section, addBar);
+            delete removedSections[key];
+            updateAddSectionBar();
+            onFormInput();
+        }
+
+        function updateAddSectionBar() {
+            var bar = document.getElementById('add-section-bar');
+            var chips = document.getElementById('add-section-chips');
+            var keys = Object.keys(removedSections);
+            if (keys.length === 0) {
+                bar.classList.remove('visible');
+                chips.innerHTML = '';
+                return;
+            }
+            bar.classList.add('visible');
+            chips.innerHTML = '';
+            keys.forEach(function(key) {
+                var section = removedSections[key];
+                var label = section.dataset.label || key;
+                var chip = document.createElement('button');
+                chip.className = 'add-section-chip';
+                chip.textContent = '+ ' + label;
+                chip.onclick = function() { restoreSection(key); };
+                chips.appendChild(chip);
+            });
         }
 
         function removeEntry(btn) {
@@ -2187,8 +2526,7 @@ UI_HTML = """
 
         function entryControls() {
             return '<div class="entry-controls">' +
-                '<button onclick="moveEntry(this,-1)" title="Move up">&#9650;</button>' +
-                '<button onclick="moveEntry(this,1)" title="Move down">&#9660;</button>' +
+                '<span class="drag-handle" onmousedown="startEntryDrag(event, this)">&#8942;&#8942;</span>' +
                 '<button onclick="toggleEntryCollapse(this)" title="Collapse">&#8722;</button>' +
                 '<button class="remove-entry-btn" onclick="removeEntry(this)" title="Remove">&times;</button>' +
                 '</div>';
@@ -2268,6 +2606,7 @@ UI_HTML = """
             var row = document.createElement('div');
             row.className = 'social-row';
             row.innerHTML =
+                '<span class="drag-handle" onmousedown="startRowDrag(event, this)">&#8942;&#8942;</span>' +
                 '<div class="form-field"><label>Label</label><input type="text" data-field="label" value="' + escAttr(label||'') + '" /></div>' +
                 '<div class="form-field"><label>Details</label><input type="text" data-field="details" value="' + escAttr(details||'') + '" placeholder="Comma-separated" /></div>' +
                 '<button onclick="this.parentElement.remove();onFormInput();" title="Remove">&times;</button>';
@@ -2279,7 +2618,7 @@ UI_HTML = """
             var list = document.getElementById('certifications-list');
             var item = document.createElement('div');
             item.className = 'highlight-item';
-            item.innerHTML = '<input type="text" value="' + escAttr(value||'') + '" /><button onclick="this.parentElement.remove();onFormInput();" title="Remove">&times;</button>';
+            item.innerHTML = '<span class="drag-handle" onmousedown="startRowDrag(event, this)">&#8942;&#8942;</span><input type="text" value="' + escAttr(value||'') + '" /><button onclick="this.parentElement.remove();onFormInput();" title="Remove">&times;</button>';
             list.appendChild(item);
         }
 
@@ -2289,6 +2628,7 @@ UI_HTML = """
             var row = document.createElement('div');
             row.className = 'social-row';
             row.innerHTML =
+                '<span class="drag-handle" onmousedown="startRowDrag(event, this)">&#8942;&#8942;</span>' +
                 '<div class="form-field"><label>Label</label><input type="text" data-field="label" value="' + escAttr(label||'') + '" /></div>' +
                 '<div class="form-field"><label>Details</label><input type="text" data-field="details" value="' + escAttr(details||'') + '" /></div>' +
                 '<button onclick="this.parentElement.remove();onFormInput();" title="Remove">&times;</button>';
@@ -2317,7 +2657,7 @@ UI_HTML = """
             if (isRendering) return;
             isRendering = true;
             setEditorStatus('Rendering...', 'info');
-            var yamlContent = buildYAMLFromForm();
+            var yamlContent = getYAMLContent();
             fetch('/api/save-working-cv', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -2354,7 +2694,7 @@ UI_HTML = """
 
         /* ── Download Functions ── */
         function downloadYAML() {
-            var content = buildYAMLFromForm();
+            var content = getYAMLContent();
             var blob = new Blob([content], { type: 'text/yaml' });
             var url = URL.createObjectURL(blob);
             var a = document.createElement('a');
@@ -2369,20 +2709,46 @@ UI_HTML = """
             window.location.href = '/api/download-yaml';
         }
 
-        /* ── Raw YAML Modal ── */
-        function openYAMLModal() {
-            var yaml = buildYAMLFromForm();
-            document.getElementById('yaml-modal-text').value = yaml;
-            document.getElementById('yaml-modal').classList.add('open');
+        /* ── Editor Mode Toggle ── */
+        function switchToYAML() {
+            if (editorMode === 'yaml') return;
+            editorMode = 'yaml';
+            var yamlContent = buildYAMLFromForm();
+            document.getElementById('yaml-raw-editor').value = yamlContent;
+            document.getElementById('form-panel').style.display = 'none';
+            document.getElementById('yaml-edit-panel').style.display = 'block';
+            document.getElementById('mode-form-btn').classList.remove('active');
+            document.getElementById('mode-yaml-btn').classList.add('active');
         }
 
-        function closeYAMLModal() {
-            document.getElementById('yaml-modal').classList.remove('open');
+        function switchToForm() {
+            if (editorMode === 'form') return;
+            editorMode = 'form';
+            var yamlContent = document.getElementById('yaml-raw-editor').value;
+            try {
+                populateFormFromYAML(yamlContent);
+            } catch (e) {
+                showToast('Invalid YAML - form not updated', 'error');
+            }
+            document.getElementById('yaml-edit-panel').style.display = 'none';
+            document.getElementById('form-panel').style.display = 'block';
+            document.getElementById('mode-yaml-btn').classList.remove('active');
+            document.getElementById('mode-form-btn').classList.add('active');
         }
 
-        /* Close modal on backdrop click */
-        document.getElementById('yaml-modal').addEventListener('click', function(e) {
-            if (e.target === this) closeYAMLModal();
+        function getYAMLContent() {
+            if (editorMode === 'yaml') {
+                return document.getElementById('yaml-raw-editor').value;
+            }
+            return buildYAMLFromForm();
+        }
+
+        /* Debounced input on YAML textarea */
+        document.getElementById('yaml-raw-editor').addEventListener('input', function() {
+            if (!formReady) return;
+            setEditorStatus('Editing...', 'info');
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(function() { saveAndRender(); }, 1500);
         });
 
         /* ── Init on load ── */
@@ -2475,6 +2841,29 @@ def download_yaml():
         )
     return jsonify({"error": "No working CV file available"}), 404
 
+
+@app.route('/api/fetch-url', methods=['POST'])
+def fetch_url():
+    """Fetch a URL and extract text content for job ad pasting."""
+    data = request.get_json()
+    url = data.get('url', '').strip()
+    if not url:
+        return jsonify({"success": False, "error": "No URL provided"})
+    try:
+        resp = _requests.get(url, timeout=15, headers={
+            'User-Agent': 'Mozilla/5.0 (compatible; ResumeAgent/1.0)'
+        })
+        resp.raise_for_status()
+        content_type = resp.headers.get('Content-Type', '')
+        if 'html' in content_type:
+            text = _html_to_text(resp.text)
+        else:
+            text = resp.text
+        if len(text.strip()) < 50:
+            return jsonify({"success": False, "error": "Page content too short"})
+        return jsonify({"success": True, "text": text[:50000]})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
 
 
 if __name__ == '__main__':
